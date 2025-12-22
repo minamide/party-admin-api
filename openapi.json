@@ -1,0 +1,1985 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Party Admin API",
+    "description": "SNS Platform API - X-like Twitter Clone",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Development Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8787",
+      "description": "Local Development"
+    },
+    {
+      "url": "https://api.example.com",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "ヘルスチェック",
+        "tags": ["Health"],
+        "responses": {
+          "200": {
+            "description": "ヘルスチェック成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "summary": "ユーザー一覧取得",
+        "tags": ["Users"],
+        "responses": {
+          "200": {
+            "description": "ユーザー一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/User" }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "サーバーエラー"
+          }
+        }
+      },
+      "post": {
+        "summary": "ユーザー作成",
+        "tags": ["Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "handle": { "type": "string" },
+                  "role": { "type": "string", "enum": ["user", "admin", "moderator"] },
+                  "bio": { "type": "string" },
+                  "photoUrl": { "type": "string" },
+                  "bannerUrl": { "type": "string" }
+                },
+                "required": ["id", "name", "handle"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ユーザー作成成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "400": {
+            "description": "リクエストエラー"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "ユーザー詳細取得",
+        "tags": ["Users"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ユーザー詳細",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          },
+          "404": {
+            "description": "ユーザーが見つかりません"
+          }
+        }
+      },
+      "put": {
+        "summary": "ユーザー更新",
+        "tags": ["Users"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "bio": { "type": "string" },
+                  "photoUrl": { "type": "string" },
+                  "bannerUrl": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ユーザー更新成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/User" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "ユーザー削除",
+        "tags": ["Users"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ユーザー削除成功"
+          }
+        }
+      }
+    },
+    "/users/{id}/posts": {
+      "get": {
+        "summary": "ユーザーの投稿取得",
+        "tags": ["Users", "Posts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "投稿一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Post" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/followers": {
+      "get": {
+        "summary": "フォロワー一覧取得",
+        "tags": ["Users", "Follows"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "フォロワー一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/UserSimple" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/following": {
+      "get": {
+        "summary": "フォロー中のユーザー一覧取得",
+        "tags": ["Users", "Follows"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "フォロー中のユーザー一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/UserSimple" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}/drafts": {
+      "get": {
+        "summary": "ユーザーの下書き一覧取得",
+        "tags": ["Users", "Drafts"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "下書き一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Draft" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{userId}/settings": {
+      "get": {
+        "summary": "ユーザー設定取得",
+        "tags": ["Users", "Settings"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ユーザー設定",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserSettings" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "ユーザー設定更新",
+        "tags": ["Users", "Settings"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "preferences": { "type": "object" },
+                  "notifications": { "type": "object" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "設定更新成功"
+          }
+        }
+      }
+    },
+    "/posts": {
+      "get": {
+        "summary": "投稿一覧取得",
+        "tags": ["Posts"],
+        "responses": {
+          "200": {
+            "description": "投稿一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Post" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "投稿作成",
+        "tags": ["Posts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "authorId": { "type": "string" },
+                  "communityId": { "type": "string" },
+                  "content": { "type": "string" },
+                  "media": { "type": "array" },
+                  "hashtags": { "type": "array" },
+                  "type": { "type": "string", "enum": ["text", "image", "video", "poll", "event"] },
+                  "visibility": { "type": "string", "enum": ["public", "private", "followers"] }
+                },
+                "required": ["authorId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "投稿作成成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Post" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/{id}": {
+      "get": {
+        "summary": "投稿詳細取得",
+        "tags": ["Posts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "投稿詳細",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Post" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "投稿更新",
+        "tags": ["Posts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": { "type": "string" },
+                  "media": { "type": "array" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "投稿更新成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "投稿削除",
+        "tags": ["Posts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "投稿削除成功"
+          }
+        }
+      }
+    },
+    "/posts/{id}/likes": {
+      "get": {
+        "summary": "投稿のいいね一覧取得",
+        "tags": ["Posts", "Likes"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "いいね者一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/UserSimple" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/{postId}/attachments": {
+      "get": {
+        "summary": "投稿の添付ファイル一覧取得",
+        "tags": ["Posts", "Attachments"],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "添付ファイル一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PostAttachment" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/communities": {
+      "get": {
+        "summary": "コミュニティ一覧取得",
+        "tags": ["Communities"],
+        "responses": {
+          "200": {
+            "description": "コミュニティ一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Community" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "コミュニティ作成",
+        "tags": ["Communities"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "iconUrl": { "type": "string" },
+                  "bannerUrl": { "type": "string" }
+                },
+                "required": ["ownerId", "name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "コミュニティ作成成功"
+          }
+        }
+      }
+    },
+    "/communities/{id}": {
+      "get": {
+        "summary": "コミュニティ詳細取得",
+        "tags": ["Communities"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "コミュニティ詳細",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Community" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "コミュニティ更新",
+        "tags": ["Communities"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "iconUrl": { "type": "string" },
+                  "bannerUrl": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "コミュニティ更新成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "コミュニティ削除",
+        "tags": ["Communities"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "コミュニティ削除成功"
+          }
+        }
+      }
+    },
+    "/communities/{id}/members": {
+      "get": {
+        "summary": "コミュニティメンバー一覧取得",
+        "tags": ["Communities", "Members"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "メンバー一覧"
+          }
+        }
+      }
+    },
+    "/community-members": {
+      "post": {
+        "summary": "コミュニティメンバー追加",
+        "tags": ["Communities", "Members"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "communityId": { "type": "string" },
+                  "role": { "type": "string", "enum": ["member", "moderator", "owner"] }
+                },
+                "required": ["userId", "communityId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "メンバー追加成功"
+          }
+        }
+      }
+    },
+    "/community-members/{userId}/{communityId}": {
+      "delete": {
+        "summary": "コミュニティメンバー削除",
+        "tags": ["Communities", "Members"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "communityId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "メンバー削除成功"
+          }
+        }
+      }
+    },
+    "/lists": {
+      "get": {
+        "summary": "リスト一覧取得",
+        "tags": ["Lists"],
+        "responses": {
+          "200": {
+            "description": "リスト一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/List" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "リスト作成",
+        "tags": ["Lists"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": { "type": "string" },
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "isPrivate": { "type": "boolean" }
+                },
+                "required": ["ownerId", "name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "リスト作成成功"
+          }
+        }
+      }
+    },
+    "/lists/{id}": {
+      "get": {
+        "summary": "リスト詳細取得",
+        "tags": ["Lists"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "リスト詳細"
+          }
+        }
+      },
+      "put": {
+        "summary": "リスト更新",
+        "tags": ["Lists"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "isPrivate": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "リスト更新成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "リスト削除",
+        "tags": ["Lists"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "リスト削除成功"
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "summary": "会話一覧取得",
+        "tags": ["Conversations"],
+        "responses": {
+          "200": {
+            "description": "会話一覧"
+          }
+        }
+      },
+      "post": {
+        "summary": "会話作成",
+        "tags": ["Conversations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "groupName": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "会話作成成功"
+          }
+        }
+      }
+    },
+    "/conversations/{id}/messages": {
+      "get": {
+        "summary": "会話のメッセージ取得",
+        "tags": ["Conversations", "Messages"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "メッセージ一覧"
+          }
+        }
+      }
+    },
+    "/messages": {
+      "post": {
+        "summary": "メッセージ送信",
+        "tags": ["Messages"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "conversationId": { "type": "string" },
+                  "senderId": { "type": "string" },
+                  "content": { "type": "string" },
+                  "media": { "type": "array" }
+                },
+                "required": ["conversationId", "senderId", "content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "メッセージ送信成功"
+          }
+        }
+      }
+    },
+    "/messages/{id}": {
+      "delete": {
+        "summary": "メッセージ削除",
+        "tags": ["Messages"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "メッセージ削除成功"
+          }
+        }
+      }
+    },
+    "/notifications/{userId}": {
+      "get": {
+        "summary": "ユーザーの通知取得",
+        "tags": ["Notifications"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "通知一覧"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "post": {
+        "summary": "通知作成",
+        "tags": ["Notifications"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recipientId": { "type": "string" },
+                  "type": { "type": "string" },
+                  "actorIds": { "type": "array" },
+                  "resourceId": { "type": "string" },
+                  "contentPreview": { "type": "string" }
+                },
+                "required": ["recipientId", "type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "通知作成成功"
+          }
+        }
+      }
+    },
+    "/notifications/{id}": {
+      "put": {
+        "summary": "通知の既読状態更新",
+        "tags": ["Notifications"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isRead": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "通知更新成功"
+          }
+        }
+      }
+    },
+    "/reports": {
+      "get": {
+        "summary": "レポート一覧取得",
+        "tags": ["Reports"],
+        "responses": {
+          "200": {
+            "description": "レポート一覧"
+          }
+        }
+      },
+      "post": {
+        "summary": "レポート作成",
+        "tags": ["Reports"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reporterId": { "type": "string" },
+                  "targetId": { "type": "string" },
+                  "reason": { "type": "string" }
+                },
+                "required": ["reporterId", "targetId", "reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "レポート作成成功"
+          }
+        }
+      }
+    },
+    "/reports/{id}": {
+      "put": {
+        "summary": "レポート状態更新",
+        "tags": ["Reports"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["pending", "reviewing", "resolved", "dismissed"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "レポート更新成功"
+          }
+        }
+      }
+    },
+    "/follows": {
+      "post": {
+        "summary": "ユーザーをフォロー",
+        "tags": ["Follows"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "followerId": { "type": "string" },
+                  "followingId": { "type": "string" }
+                },
+                "required": ["followerId", "followingId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "フォロー成功"
+          }
+        }
+      }
+    },
+    "/follows/{followerId}/{followingId}": {
+      "delete": {
+        "summary": "ユーザーをアンフォロー",
+        "tags": ["Follows"],
+        "parameters": [
+          {
+            "name": "followerId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "followingId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "アンフォロー成功"
+          }
+        }
+      }
+    },
+    "/likes": {
+      "post": {
+        "summary": "投稿にいいねする",
+        "tags": ["Likes"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "postId": { "type": "string" }
+                },
+                "required": ["userId", "postId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "いいね成功"
+          }
+        }
+      }
+    },
+    "/likes/{userId}/{postId}": {
+      "delete": {
+        "summary": "投稿からいいねを削除",
+        "tags": ["Likes"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "いいね削除成功"
+          }
+        }
+      }
+    },
+    "/reposts": {
+      "post": {
+        "summary": "投稿をリポスト",
+        "tags": ["Reposts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "postId": { "type": "string" }
+                },
+                "required": ["userId", "postId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "リポスト成功"
+          }
+        }
+      }
+    },
+    "/reposts/{userId}/{postId}": {
+      "delete": {
+        "summary": "リポストを削除",
+        "tags": ["Reposts"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "リポスト削除成功"
+          }
+        }
+      }
+    },
+    "/bookmarks": {
+      "post": {
+        "summary": "投稿をブックマーク",
+        "tags": ["Bookmarks"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "postId": { "type": "string" }
+                },
+                "required": ["userId", "postId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ブックマーク成功"
+          }
+        }
+      }
+    },
+    "/bookmarks/{userId}/{postId}": {
+      "delete": {
+        "summary": "ブックマークを削除",
+        "tags": ["Bookmarks"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ブックマーク削除成功"
+          }
+        }
+      }
+    },
+    "/users/{id}/bookmarks": {
+      "get": {
+        "summary": "ユーザーのブックマーク取得",
+        "tags": ["Bookmarks"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ブックマーク一覧"
+          }
+        }
+      }
+    },
+    "/blocked-users": {
+      "post": {
+        "summary": "ユーザーをブロック",
+        "tags": ["Blocked Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "targetId": { "type": "string" }
+                },
+                "required": ["userId", "targetId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ブロック成功"
+          }
+        }
+      }
+    },
+    "/blocked-users/{userId}/{targetId}": {
+      "delete": {
+        "summary": "ユーザーのブロックを解除",
+        "tags": ["Blocked Users"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ブロック解除成功"
+          }
+        }
+      }
+    },
+    "/muted-users": {
+      "post": {
+        "summary": "ユーザーをミュート",
+        "tags": ["Muted Users"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "targetId": { "type": "string" }
+                },
+                "required": ["userId", "targetId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ミュート成功"
+          }
+        }
+      }
+    },
+    "/muted-users/{userId}/{targetId}": {
+      "delete": {
+        "summary": "ユーザーのミュートを解除",
+        "tags": ["Muted Users"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "targetId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ミュート解除成功"
+          }
+        }
+      }
+    },
+    "/poll-votes": {
+      "post": {
+        "summary": "投票",
+        "tags": ["Poll Votes"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "postId": { "type": "string" },
+                  "optionIndex": { "type": "integer" }
+                },
+                "required": ["userId", "postId", "optionIndex"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "投票成功"
+          }
+        }
+      }
+    },
+    "/poll-votes/{userId}/{postId}": {
+      "delete": {
+        "summary": "投票を削除",
+        "tags": ["Poll Votes"],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "投票削除成功"
+          }
+        }
+      }
+    },
+    "/event-attendances": {
+      "post": {
+        "summary": "イベント出席登録",
+        "tags": ["Event Attendances"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "eventId": { "type": "string" },
+                  "userId": { "type": "string" },
+                  "status": { "type": "string", "enum": ["going", "interested", "not_going"] }
+                },
+                "required": ["eventId", "userId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "出席登録成功"
+          }
+        }
+      }
+    },
+    "/event-attendances/{eventId}/{userId}": {
+      "put": {
+        "summary": "イベント出席状態更新",
+        "tags": ["Event Attendances"],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["going", "interested", "not_going"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "出席状態更新成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "イベント出席登録を削除",
+        "tags": ["Event Attendances"],
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "出席登録削除成功"
+          }
+        }
+      }
+    },
+    "/events/{id}/attendees": {
+      "get": {
+        "summary": "イベントの出席者一覧取得",
+        "tags": ["Event Attendances"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "出席者一覧"
+          }
+        }
+      }
+    },
+    "/drafts": {
+      "post": {
+        "summary": "下書き作成",
+        "tags": ["Drafts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string" },
+                  "content": { "type": "string" }
+                },
+                "required": ["userId", "content"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "下書き作成成功"
+          }
+        }
+      }
+    },
+    "/drafts/{id}": {
+      "put": {
+        "summary": "下書き更新",
+        "tags": ["Drafts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "下書き更新成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "下書き削除",
+        "tags": ["Drafts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "下書き削除成功"
+          }
+        }
+      }
+    },
+    "/attachments": {
+      "post": {
+        "summary": "添付ファイル作成",
+        "tags": ["Attachments"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "postId": { "type": "string" },
+                  "mediaUrl": { "type": "string" },
+                  "type": { "type": "string", "enum": ["image", "video", "audio", "document"] },
+                  "width": { "type": "integer" },
+                  "height": { "type": "integer" },
+                  "metadata": { "type": "object" }
+                },
+                "required": ["postId", "mediaUrl", "type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "添付ファイル作成成功"
+          }
+        }
+      }
+    },
+    "/attachments/{id}": {
+      "delete": {
+        "summary": "添付ファイル削除",
+        "tags": ["Attachments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "添付ファイル削除成功"
+          }
+        }
+      }
+    },
+    "/attachments/{id}/versions": {
+      "get": {
+        "summary": "メディアバージョン一覧取得",
+        "tags": ["Attachments", "Media Versions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "バージョン一覧"
+          }
+        }
+      }
+    },
+    "/media-versions": {
+      "post": {
+        "summary": "メディアバージョン作成",
+        "tags": ["Media Versions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "attachmentId": { "type": "string" },
+                  "url": { "type": "string" },
+                  "quality": { "type": "string", "enum": ["original", "high", "medium", "low"] },
+                  "format": { "type": "string", "enum": ["jpg", "png", "webp", "mp4", "webm"] },
+                  "size": { "type": "integer" }
+                },
+                "required": ["attachmentId", "url"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "バージョン作成成功"
+          }
+        }
+      }
+    },
+    "/hashtags": {
+      "get": {
+        "summary": "ハッシュタグ一覧取得（人気順）",
+        "tags": ["Hashtags"],
+        "responses": {
+          "200": {
+            "description": "ハッシュタグ一覧",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Hashtag" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hashtags/{tag}": {
+      "get": {
+        "summary": "ハッシュタグ詳細取得",
+        "tags": ["Hashtags"],
+        "parameters": [
+          {
+            "name": "tag",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ハッシュタグ詳細"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "handle": { "type": "string" },
+          "role": { "type": "string" },
+          "bio": { "type": "string" },
+          "photoUrl": { "type": "string" },
+          "bannerUrl": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserSimple": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "handle": { "type": "string" },
+          "photoUrl": { "type": "string" }
+        }
+      },
+      "Post": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "authorId": { "type": "string" },
+          "communityId": { "type": "string" },
+          "content": { "type": "string" },
+          "media": { "type": "array" },
+          "hashtags": { "type": "array" },
+          "type": { "type": "string" },
+          "visibility": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Community": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "ownerId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "iconUrl": { "type": "string" },
+          "bannerUrl": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "List": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "ownerId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "isPrivate": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Draft": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "userId": { "type": "string" },
+          "content": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PostAttachment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "postId": { "type": "string" },
+          "mediaUrl": { "type": "string" },
+          "type": { "type": "string" },
+          "width": { "type": "integer" },
+          "height": { "type": "integer" },
+          "metadata": { "type": "object" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Hashtag": {
+        "type": "object",
+        "properties": {
+          "tag": { "type": "string" },
+          "count": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserSettings": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "preferences": { "type": "object" },
+          "notifications": { "type": "object" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "ヘルスチェック"
+    },
+    {
+      "name": "Users",
+      "description": "ユーザー管理"
+    },
+    {
+      "name": "Posts",
+      "description": "投稿管理"
+    },
+    {
+      "name": "Communities",
+      "description": "コミュニティ管理"
+    },
+    {
+      "name": "Lists",
+      "description": "リスト管理"
+    },
+    {
+      "name": "Conversations",
+      "description": "会話・メッセージング"
+    },
+    {
+      "name": "Messages",
+      "description": "メッセージ管理"
+    },
+    {
+      "name": "Notifications",
+      "description": "通知管理"
+    },
+    {
+      "name": "Reports",
+      "description": "レポート・違反報告"
+    },
+    {
+      "name": "Follows",
+      "description": "フォロー・フォロワー"
+    },
+    {
+      "name": "Likes",
+      "description": "いいね機能"
+    },
+    {
+      "name": "Reposts",
+      "description": "リポスト機能"
+    },
+    {
+      "name": "Bookmarks",
+      "description": "ブックマーク機能"
+    },
+    {
+      "name": "Members",
+      "description": "メンバー管理"
+    },
+    {
+      "name": "Blocked Users",
+      "description": "ブロック管理"
+    },
+    {
+      "name": "Muted Users",
+      "description": "ミュート管理"
+    },
+    {
+      "name": "Poll Votes",
+      "description": "投票機能"
+    },
+    {
+      "name": "Event Attendances",
+      "description": "イベント出席"
+    },
+    {
+      "name": "Drafts",
+      "description": "下書き"
+    },
+    {
+      "name": "Attachments",
+      "description": "メディア添付ファイル"
+    },
+    {
+      "name": "Media Versions",
+      "description": "メディアバージョン管理"
+    },
+    {
+      "name": "Hashtags",
+      "description": "ハッシュタグ"
+    },
+    {
+      "name": "Settings",
+      "description": "ユーザー設定"
+    }
+  ]
+}

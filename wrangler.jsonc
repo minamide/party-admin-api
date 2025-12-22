@@ -18,12 +18,8 @@
 		{
 			"binding": "DB",
 			"database_name": "party-admin-db",
-			"database_id": "f060d503-6b8c-48af-81df-fa4e13005448"
-		},
-		{
-			"binding": "party_admin_db",
-			"database_name": "party-admin-db",
-			"database_id": "f060d503-6b8c-48af-81df-fa4e13005448"
+			"database_id": "f060d503-6b8c-48af-81df-fa4e13005448",
+			"migrations_dir": "./drizzle"
 		}
 	]
 	/**
