@@ -1,24 +1,41 @@
 import { Hono } from "hono";
-import { drizzle } from 'drizzle-orm/d1';
 import { posts, likes, users } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { getDb } from '../utils/db';
+import { getErrorMessage, createErrorResponse } from '../utils/errors';
+import { validateRequired } from '../utils/validation';
 
 export const postsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 postsRouter.get("/", async (c) => {
-  const db = drizzle(c.env.DB);
   try {
+    const db = getDb(c);
     const result = await db.select().from(posts).orderBy(desc(posts.createdAt)).all();
-    return c.json(result);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'POSTS_LIST_ERROR'), 500);
   }
 });
 
 postsRouter.post("/", async (c) => {
-  const body = await c.req.json();
-  const db = drizzle(c.env.DB);
   try {
+    const body = await c.req.json();
+    
+    // Validation
+    const validation = validateRequired(body, ['authorId']);
+    if (!validation.valid) {
+      return c.json(
+        createErrorResponse(
+          `Missing required fields: ${validation.missing?.join(', ')}`,
+          'VALIDATION_ERROR',
+          { missing: validation.missing }
+        ),
+        400
+      );
+    }
+
+    const db = getDb(c);
     const result = await db.insert(posts).values({
       id: crypto.randomUUID(),
       authorId: body.authorId,
@@ -29,28 +46,40 @@ postsRouter.post("/", async (c) => {
       type: body.type || 'text',
       visibility: body.visibility || 'public',
     }).returning().get();
+    
     return c.json(result, 201);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 400);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'POST_CREATE_ERROR'), 400);
   }
 });
 
 postsRouter.get("/:id", async (c) => {
-  const id = c.req.param('id');
-  const db = drizzle(c.env.DB);
   try {
+    const id = c.req.param('id');
+    const db = getDb(c);
     const result = await db.select().from(posts).where(eq(posts.id, id)).get();
-    return result ? c.json(result) : c.json({ error: '投稿が見つかりません' }, 404);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    
+    if (!result) {
+      return c.json(
+        createErrorResponse('投稿が見つかりません', 'POST_NOT_FOUND'),
+        404
+      );
+    }
+    
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'POST_GET_ERROR'), 500);
   }
 });
 
 postsRouter.put("/:id", async (c) => {
-  const id = c.req.param('id');
-  const body = await c.req.json();
-  const db = drizzle(c.env.DB);
   try {
+    const id = c.req.param('id');
+    const body = await c.req.json();
+    const db = getDb(c);
+
     const result = await db.update(posts)
       .set({
         content: body.content,
@@ -60,27 +89,31 @@ postsRouter.put("/:id", async (c) => {
       .where(eq(posts.id, id))
       .returning()
       .get();
-    return c.json(result);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 400);
+    
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'POST_UPDATE_ERROR'), 400);
   }
 });
 
 postsRouter.delete("/:id", async (c) => {
-  const id = c.req.param('id');
-  const db = drizzle(c.env.DB);
   try {
+    const id = c.req.param('id');
+    const db = getDb(c);
+    
     await db.delete(posts).where(eq(posts.id, id));
     return c.json({ success: true }, 200);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 400);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'POST_DELETE_ERROR'), 400);
   }
 });
 
 postsRouter.get("/:id/likes", async (c) => {
-  const postId = c.req.param('id');
-  const db = drizzle(c.env.DB);
   try {
+    const postId = c.req.param('id');
+    const db = getDb(c);
     const result = await db.select({ 
       id: users.id, 
       name: users.name, 
@@ -91,8 +124,10 @@ postsRouter.get("/:id/likes", async (c) => {
       .innerJoin(users, eq(likes.userId, users.id))
       .where(eq(likes.postId, postId))
       .all();
-    return c.json(result);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'POST_LIKES_ERROR'), 500);
   }
 });

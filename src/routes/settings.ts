@@ -1,28 +1,37 @@
 import { Hono } from "hono";
-import { drizzle } from 'drizzle-orm/d1';
 import { userSettings } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { getDb } from '../utils/db';
+import { getErrorMessage, createErrorResponse } from '../utils/errors';
+import { validateRequired } from '../utils/validation';
 
 export const settingsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 settingsRouter.get("/:userId", async (c) => {
-  const userId = c.req.param('userId');
-  const db = drizzle(c.env.DB);
   try {
+    const userId = c.req.param('userId');
+    const db = getDb(c);
     const result = await db.select().from(userSettings)
       .where(eq(userSettings.userId, userId))
       .get();
-    return result ? c.json(result) : c.json({ error: '設定が見つかりません' }, 404);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    if (!result) {
+      return c.json(
+        createErrorResponse('設定が見つかりません', 'SETTINGS_NOT_FOUND'),
+        404
+      );
+    }
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'SETTINGS_GET_ERROR'), 500);
   }
 });
 
 settingsRouter.put("/:userId", async (c) => {
-  const userId = c.req.param('userId');
-  const body = await c.req.json();
-  const db = drizzle(c.env.DB);
   try {
+    const userId = c.req.param('userId');
+    const body = await c.req.json();
+    const db = getDb(c);
     const result = await db.update(userSettings)
       .set({
         preferences: body.preferences ? JSON.stringify(body.preferences) : null,
@@ -32,8 +41,9 @@ settingsRouter.put("/:userId", async (c) => {
       .where(eq(userSettings.userId, userId))
       .returning()
       .get();
-    return c.json(result);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 400);
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'SETTINGS_UPDATE_ERROR'), 400);
   }
 });

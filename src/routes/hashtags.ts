@@ -1,27 +1,37 @@
 import { Hono } from "hono";
-import { drizzle } from 'drizzle-orm/d1';
 import { hashtags } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { getDb } from '../utils/db';
+import { getErrorMessage, createErrorResponse } from '../utils/errors';
+import { validateRequired } from '../utils/validation';
 
 export const hashtagsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 hashtagsRouter.get("/", async (c) => {
-  const db = drizzle(c.env.DB);
   try {
+    const db = getDb(c);
     const result = await db.select().from(hashtags).orderBy(desc(hashtags.count)).all();
-    return c.json(result);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'HASHTAGS_LIST_ERROR'), 500);
   }
 });
 
 hashtagsRouter.get("/:tag", async (c) => {
-  const tag = c.req.param('tag');
-  const db = drizzle(c.env.DB);
   try {
+    const tag = c.req.param('tag');
+    const db = getDb(c);
     const result = await db.select().from(hashtags).where(eq(hashtags.tag, tag)).get();
-    return result ? c.json(result) : c.json({ error: 'ハッシュタグが見つかりません' }, 404);
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    if (!result) {
+      return c.json(
+        createErrorResponse('ハッシュタグが見つかりません', 'HASHTAG_NOT_FOUND'),
+        404
+      );
+    }
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'HASHTAG_GET_ERROR'), 500);
   }
 });
