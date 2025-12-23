@@ -47,7 +47,8 @@ bookmarksRouter.delete("/:userId/:postId", async (c) => {
   }
 });
 
-botry {
+bookmarksRouter.get("/:userId", async (c) => {
+  try {
     const userId = c.req.param('userId');
     const db = getDb(c);
     const result = await db.select().from(bookmarks)
@@ -56,7 +57,6 @@ botry {
     return c.json(result, 200);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
-    return c.json(createErrorResponse(message, 'BOOKMARKS_LIST_ERROR')
-    return c.json({ error: error.message }, 500);
+    return c.json(createErrorResponse(message, 'BOOKMARKS_LIST_ERROR'), 500);
   }
 });
