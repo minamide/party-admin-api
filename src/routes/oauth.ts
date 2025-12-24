@@ -15,21 +15,13 @@ import {
   cleanupExpiredStates,
 } from '../auth/oauth-callback';
 import { createErrorResponse, getErrorMessage } from '../utils/errors';
+import { generateJWT } from '../utils/jwt';
 import { getDb } from '../utils/db';
 import { socialAccounts } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import crypto from 'crypto';
 
 export const oauthRouter = new Hono<{ Bindings: CloudflareBindings }>();
-
-let oauthManager: OAuthProviderManager;
-
-/**
- * OAuth マネージャーを初期化
- */
-export function initializeOAuthManager(manager: OAuthProviderManager) {
-  oauthManager = manager;
-}
 
 /**
  * GET /oauth/authorize/:provider
@@ -38,6 +30,16 @@ export function initializeOAuthManager(manager: OAuthProviderManager) {
 oauthRouter.get('/authorize/:provider', async (c: Context) => {
   try {
     const provider = c.req.param('provider') as ProviderType;
+    
+    // Get OAuth manager from context
+    const oauthManager = c.get('oauthManager') as OAuthProviderManager;
+    
+    if (!oauthManager) {
+      return c.json(
+        createErrorResponse('OAuth manager not initialized', 'OAUTH_NOT_INITIALIZED'),
+        500
+      );
+    }
 
     // プロバイダーの確認
     if (!oauthManager.isProviderAvailable(provider)) {
@@ -58,11 +60,15 @@ oauthRouter.get('/authorize/:provider', async (c: Context) => {
 
     // 認可 URL を生成
     const authorizationUrl = oauthProvider.getAuthorizationUrl(state, scope);
+    
+    // デバッグ: 生成されたURLをログ出力
+    console.log('Authorization URL:', authorizationUrl);
 
     // リダイレクト
     return c.redirect(authorizationUrl);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
+    console.error('OAuth authorize error:', error);
     return c.json(
       createErrorResponse(message, 'OAUTH_AUTHORIZE_ERROR'),
       500
@@ -77,6 +83,22 @@ oauthRouter.get('/authorize/:provider', async (c: Context) => {
 oauthRouter.get('/callback/:provider', async (c: Context) => {
   try {
     const provider = c.req.param('provider') as ProviderType;
+    
+    // Get OAuth manager from context
+    const oauthManager = c.get('oauthManager') as OAuthProviderManager;
+    
+    if (!oauthManager) {
+      return c.json(
+        createErrorResponse('OAuth manager not initialized', 'OAUTH_NOT_INITIALIZED'),
+        500
+      );
+    }
+    
+    // デバッグ: 受信したクエリパラメータをログ出力
+    const code = c.req.query('code');
+    const state = c.req.query('state');
+    const error = c.req.query('error');
+    console.log('OAuth callback received:', { provider, code: code ? 'present' : 'missing', state: state ? 'present' : 'missing', error });
 
     // プロバイダーの確認
     if (!oauthManager.isProviderAvailable(provider)) {
@@ -99,17 +121,30 @@ oauthRouter.get('/callback/:provider', async (c: Context) => {
       );
     }
 
-    // フロントエンドにリダイレクト
-    // クライアントが JWT トークンを生成して返すようにしてください
-    const redirectUrl = new URL(
-      process.env.OAUTH_REDIRECT_URL || 'http://localhost:3000/auth/callback'
+    // JWT トークンを生成
+    const token = await generateJWT(
+      {
+        userId: result.userId!,
+        email: '', // プロフィールから取得する必要がある場合は追加
+        role: 'user',
+      },
+      c.env.JWT_SECRET,
+      86400 // 24 時間
     );
-    redirectUrl.searchParams.set('userId', result.userId || '');
-    redirectUrl.searchParams.set('accessToken', result.accessToken || '');
-    redirectUrl.searchParams.set('provider', provider);
-    redirectUrl.searchParams.set('isNewUser', result.socialAccountLinked ? 'false' : 'true');
 
-    return c.redirect(redirectUrl.toString());
+    // 成功レスポンスを返す
+    return c.json(
+      {
+        success: true,
+        data: {
+          userId: result.userId,
+          token,
+          provider,
+          isNewUser: !result.socialAccountLinked,
+        },
+      },
+      200
+    );
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     return c.json(

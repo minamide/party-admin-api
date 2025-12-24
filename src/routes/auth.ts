@@ -73,7 +73,7 @@ authRouter.post('/sign-up', async (c) => {
       .select()
       .from(users)
       .where(eq(users.email, body.email))
-      .first();
+      .then(rows => rows[0]);
 
     if (existingEmail) {
       return c.json(
@@ -86,7 +86,7 @@ authRouter.post('/sign-up', async (c) => {
       .select()
       .from(users)
       .where(eq(users.handle, body.handle))
-      .first();
+      .then(rows => rows[0]);
 
     if (existingHandle) {
       return c.json(
@@ -97,10 +97,14 @@ authRouter.post('/sign-up', async (c) => {
 
     // パスワードをハッシュ化
     const { hash, salt } = await hashPassword(body.password);
+    
+    console.log('Hash:', hash);
+    console.log('Salt:', salt);
 
     // 新規ユーザーを作成
     const newUserId = crypto.randomUUID();
-    const newUser = {
+    
+    const userData = {
       id: newUserId,
       name: body.name,
       email: body.email,
@@ -111,19 +115,10 @@ authRouter.post('/sign-up', async (c) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-
-    // ⚠️ DB スキーマにまだ passwordHash, passwordSalt がないので、
-    // 後のステップで DB 修正時に追加される
-    // ここではひとまず挿入を試みる
-    await db.insert(users).values({
-      id: newUserId,
-      name: body.name,
-      email: body.email,
-      handle: body.handle,
-      role: body.role || 'user',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } as any);
+    
+    console.log('Inserting user data:', JSON.stringify(userData, null, 2));
+    
+    await db.insert(users).values(userData);
 
     // JWT を生成
     const token = await generateJWT(
@@ -153,8 +148,10 @@ authRouter.post('/sign-up', async (c) => {
       201
     );
   } catch (error: unknown) {
+    console.error('Sign up error:', error);
     const message = error instanceof Error ? error.message : 'Sign up failed';
-    return c.json(createErrorResponse(message, 'SIGNUP_ERROR'), 500);
+    const stack = error instanceof Error ? error.stack : undefined;
+    return c.json(createErrorResponse(message, 'SIGNUP_ERROR', { stack }), 500);
   }
 });
 
@@ -184,7 +181,7 @@ authRouter.post('/sign-in', async (c) => {
       .select()
       .from(users)
       .where(eq(users.email, body.email))
-      .first();
+      .then(rows => rows[0]);
 
     if (!user) {
       return c.json(
@@ -193,10 +190,19 @@ authRouter.post('/sign-in', async (c) => {
       );
     }
 
-    // ⚠️ DB スキーマにまだ passwordHash, passwordSalt がないので、
-    // 検証はスキップされる。DB 修正後に実装される
-    // 現在は任意のパスワードで成功させる
-    const passwordMatch = true; // 後で修正
+    // パスワード検証
+    if (!user.passwordHash || !user.passwordSalt) {
+      return c.json(
+        createErrorResponse('Invalid credentials', 'INVALID_CREDENTIALS'),
+        401
+      );
+    }
+
+    const passwordMatch = await verifyPassword(
+      body.password,
+      user.passwordHash,
+      user.passwordSalt
+    );
 
     if (!passwordMatch) {
       return c.json(
@@ -273,7 +279,7 @@ authRouter.get('/me', async (c) => {
       .select()
       .from(users)
       .where(eq(users.id, auth.user.userId))
-      .first();
+      .then(rows => rows[0]);
 
     if (!user) {
       return c.json(

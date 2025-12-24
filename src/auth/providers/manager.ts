@@ -21,17 +21,17 @@ export interface ProviderConfigs {
 export class OAuthProviderManager {
   private providers: Map<ProviderType, BaseOAuthProvider> = new Map();
 
-  constructor(configs: ProviderConfigs) {
-    if (configs.google) {
+  constructor(configs?: ProviderConfigs) {
+    if (configs?.google) {
       this.providers.set('google', new GoogleOAuthProvider(configs.google));
     }
-    if (configs.github) {
+    if (configs?.github) {
       this.providers.set('github', new GitHubOAuthProvider(configs.github));
     }
-    if (configs.x) {
+    if (configs?.x) {
       this.providers.set('x', new XOAuthProvider(configs.x));
     }
-    if (configs.line) {
+    if (configs?.line) {
       this.providers.set('line', new LineOAuthProvider(configs.line));
     }
   }
@@ -64,24 +64,30 @@ export class OAuthProviderManager {
   /**
    * 動的にプロバイダーを登録
    */
-  registerProvider(type: ProviderType, config: OAuthConfig): void {
+  registerProvider(type: ProviderType, providerOrConfig: BaseOAuthProvider | OAuthConfig): void {
     let provider: BaseOAuthProvider;
 
-    switch (type) {
-      case 'google':
-        provider = new GoogleOAuthProvider(config);
-        break;
-      case 'github':
-        provider = new GitHubOAuthProvider(config);
-        break;
-      case 'x':
-        provider = new XOAuthProvider(config);
-        break;
-      case 'line':
-        provider = new LineOAuthProvider(config);
-        break;
-      default:
-        throw new Error(`Unknown provider type: ${type}`);
+    // If it's already a provider instance, use it directly
+    if (providerOrConfig instanceof BaseOAuthProvider) {
+      provider = providerOrConfig;
+    } else {
+      // Otherwise, create a new provider from config
+      switch (type) {
+        case 'google':
+          provider = new GoogleOAuthProvider(providerOrConfig);
+          break;
+        case 'github':
+          provider = new GitHubOAuthProvider(providerOrConfig);
+          break;
+        case 'x':
+          provider = new XOAuthProvider(providerOrConfig);
+          break;
+        case 'line':
+          provider = new LineOAuthProvider(providerOrConfig);
+          break;
+        default:
+          throw new Error(`Unknown provider type: ${type}`);
+      }
     }
 
     this.providers.set(type, provider);

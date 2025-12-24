@@ -7,6 +7,7 @@
 	"name": "party-admin-api",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-12-21",
+	"compatibility_flags": ["nodejs_compat"],
 	"assets": {
 		"binding": "ASSETS",
 		"directory": "./public"
@@ -21,7 +22,13 @@
 			"database_id": "f060d503-6b8c-48af-81df-fa4e13005448",
 			"migrations_dir": "./drizzle"
 		}
-	]
+	],
+	"vars": {
+		"JWT_SECRET": "your-super-secret-jwt-key-change-this-in-production",
+		"GOOGLE_CLIENT_ID": "1077374404839-f63s76vs6qo9fdpthc57q7p8b730p6eu.apps.googleusercontent.com",
+		"GOOGLE_CLIENT_SECRET": "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",
+		"GOOGLE_REDIRECT_URI": "http://127.0.0.1:8787/oauth/callback/google"
+	}
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

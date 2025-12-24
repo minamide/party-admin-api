@@ -60,11 +60,14 @@ export async function handleOAuthCallback(
 
   try {
     // State の検証（CSRF 対策）
+    console.log('Looking for state in database:', state);
     const savedState = await db
       .select()
       .from(oauthStates)
       .where(eq(oauthStates.state, state))
       .get();
+
+    console.log('Saved state found:', savedState ? 'yes' : 'no');
 
     if (!savedState) {
       return {
@@ -198,11 +201,15 @@ export async function generateOAuthState(
   const state = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + sessionTimeout * 1000);
 
+  console.log('Generating OAuth state:', { state, provider, expiresAt: expiresAt.toISOString() });
+
   await db.insert(oauthStates).values({
     state: state,
     provider: provider,
     expiresAt: expiresAt.toISOString(),
   });
+  
+  console.log('OAuth state saved to database');
 
   return state;
 }

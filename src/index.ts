@@ -21,8 +21,42 @@ import { hashtagsRouter } from './routes/hashtags';
 import { settingsRouter } from './routes/settings';
 import { healthRouter } from './routes/health';
 import { authMiddleware } from './middleware/auth';
+import { OAuthProviderManager } from './auth/providers/manager';
+import { GoogleOAuthProvider } from './auth/providers/google';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
+
+// Global OAuth manager instance (initialized on first request)
+let globalOAuthManager: OAuthProviderManager | null = null;
+
+// ==================== OAUTH INITIALIZATION ====================
+// Initialize OAuth providers on first request
+app.use('*', async (c, next) => {
+  // Initialize OAuth manager only once
+  if (!globalOAuthManager) {
+    globalOAuthManager = new OAuthProviderManager();
+    
+    // Add Google provider if configured
+    if (c.env.GOOGLE_CLIENT_ID && c.env.GOOGLE_CLIENT_SECRET) {
+      const googleProvider = new GoogleOAuthProvider({
+        clientId: c.env.GOOGLE_CLIENT_ID,
+        clientSecret: c.env.GOOGLE_CLIENT_SECRET,
+        redirectUri: c.env.GOOGLE_REDIRECT_URI || `${new URL(c.req.url).origin}/oauth/callback/google`,
+      });
+      console.log('Google provider created with:', {
+        clientId: c.env.GOOGLE_CLIENT_ID,
+        redirectUri: c.env.GOOGLE_REDIRECT_URI,
+      });
+      globalOAuthManager.registerProvider('google', googleProvider);
+      console.log('Provider registered, available:', globalOAuthManager.isProviderAvailable('google'));
+    }
+  }
+  
+  // Store manager in context for use in routes
+  c.set('oauthManager', globalOAuthManager);
+  
+  await next();
+});
 
 // ==================== AUTHENTICATION MIDDLEWARE ====================
 // Apply JWT authentication to all routes
