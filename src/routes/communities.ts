@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const communitiesRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -18,7 +19,7 @@ communitiesRouter.get("/", async (c) => {
   }
 });
 
-communitiesRouter.post("/", async (c) => {
+communitiesRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['name', 'ownerId']);
@@ -30,6 +31,14 @@ communitiesRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to create community as themselves (unless admin)
+    if (body.ownerId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -66,11 +75,28 @@ communitiesRouter.get("/:id", async (c) => {
   }
 });
 
-communitiesRouter.put("/:id", async (c) => {
+communitiesRouter.put("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
+    const auth = c.env.auth as any;
     const db = getDb(c);
+    
+    // Check if community exists and user is owner or admin
+    const existing = await db.select().from(communities).where(eq(communities.id, id)).get();
+    if (!existing) {
+      return c.json(
+        createErrorResponse('コミュニティが見つかりません', 'COMMUNITY_NOT_FOUND'),
+        404
+      );
+    }
+    if (existing.ownerId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const result = await db.update(communities)
       .set({
         name: body.name,
@@ -88,10 +114,27 @@ communitiesRouter.put("/:id", async (c) => {
   }
 });
 
-communitiesRouter.delete("/:id", async (c) => {
+communitiesRouter.delete("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
+    const auth = c.env.auth as any;
     const db = getDb(c);
+    
+    // Check if community exists and user is owner or admin
+    const existing = await db.select().from(communities).where(eq(communities.id, id)).get();
+    if (!existing) {
+      return c.json(
+        createErrorResponse('コミュニティが見つかりません', 'COMMUNITY_NOT_FOUND'),
+        404
+      );
+    }
+    if (existing.ownerId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     await db.delete(communities).where(eq(communities.id, id));
     return c.json({ success: true }, 200);
   } catch (error: unknown) {

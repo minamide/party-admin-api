@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const settingsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -27,10 +28,20 @@ settingsRouter.get("/:userId", async (c) => {
   }
 });
 
-settingsRouter.put("/:userId", async (c) => {
+settingsRouter.put("/:userId", requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
     const body = await c.req.json();
+    const auth = c.env.auth as any;
+    
+    // Only allow user to update their own settings (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     const result = await db.update(userSettings)
       .set({

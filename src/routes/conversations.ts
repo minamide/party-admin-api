@@ -3,8 +3,7 @@ import { conversations, messages, conversationParticipants } from '../db/schema'
 import { eq, desc, and } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
-import { validateRequired } from '../utils/validation';
-
+import { validateRequired } from '../utils/validation';import { requireAuth } from '../middleware/auth';
 export const conversationsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 conversationsRouter.get("/", async (c) => {
@@ -18,7 +17,7 @@ conversationsRouter.get("/", async (c) => {
   }
 });
 
-conversationsRouter.post("/", async (c) => {
+conversationsRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const db = getDb(c);
@@ -64,7 +63,7 @@ conversationsRouter.get("/:id/participants", async (c) => {
 });
 
 // Message operations
-conversationsRouter.post("/messages", async (c) => {
+conversationsRouter.post("/messages", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['conversationId', 'senderId', 'content']);
@@ -76,6 +75,14 @@ conversationsRouter.post("/messages", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to send message as themselves (unless admin)
+    if (body.senderId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -93,10 +100,27 @@ conversationsRouter.post("/messages", async (c) => {
   }
 });
 
-conversationsRouter.delete("/messages/:id", async (c) => {
+conversationsRouter.delete("/messages/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
+    const auth = c.env.auth as any;
     const db = getDb(c);
+    
+    // Check if message exists and user is sender or admin
+    const existing = await db.select().from(messages).where(eq(messages.id, id)).get();
+    if (!existing) {
+      return c.json(
+        createErrorResponse('メッセージが見つかりません', 'MESSAGE_NOT_FOUND'),
+        404
+      );
+    }
+    if (existing.senderId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     await db.delete(messages).where(eq(messages.id, id));
     return c.json({ success: true }, 200);
   } catch (error: unknown) {
@@ -106,7 +130,7 @@ conversationsRouter.delete("/messages/:id", async (c) => {
 });
 
 // Participant operations
-conversationsRouter.post("/participants", async (c) => {
+conversationsRouter.post("/participants", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['conversationId', 'userId']);
@@ -118,6 +142,14 @@ conversationsRouter.post("/participants", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to add themselves as participant (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -132,10 +164,20 @@ conversationsRouter.post("/participants", async (c) => {
   }
 });
 
-conversationsRouter.delete("/participants/:conversationId/:userId", async (c) => {
+conversationsRouter.delete("/participants/:conversationId/:userId", requireAuth, async (c) => {
   try {
     const conversationId = c.req.param('conversationId');
     const userId = c.req.param('userId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to remove themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(conversationParticipants)
       .where(and(eq(conversationParticipants.conversationId, conversationId), eq(conversationParticipants.userId, userId)));

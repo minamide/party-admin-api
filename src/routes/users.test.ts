@@ -120,7 +120,10 @@ describe('Users Router', () => {
         new Request('http://localhost/', {
           method: 'POST',
           body: JSON.stringify(newUser),
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer dummy-token'
+          },
         })
       );
 

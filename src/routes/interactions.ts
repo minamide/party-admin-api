@@ -4,11 +4,12 @@ import { eq, and } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const interactionsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 // Blocked Users
-interactionsRouter.post("/blocked", async (c) => {
+interactionsRouter.post("/blocked", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['userId', 'targetId']);
@@ -20,6 +21,14 @@ interactionsRouter.post("/blocked", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to block as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -34,10 +43,20 @@ interactionsRouter.post("/blocked", async (c) => {
   }
 });
 
-interactionsRouter.delete("/blocked/:userId/:targetId", async (c) => {
+interactionsRouter.delete("/blocked/:userId/:targetId", requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
     const targetId = c.req.param('targetId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to unblock as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(blockedUsers)
       .where(and(eq(blockedUsers.userId, userId), eq(blockedUsers.targetId, targetId)));
@@ -49,7 +68,7 @@ interactionsRouter.delete("/blocked/:userId/:targetId", async (c) => {
 });
 
 // Muted Users
-interactionsRouter.post("/muted", async (c) => {
+interactionsRouter.post("/muted", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['userId', 'targetId']);
@@ -61,6 +80,14 @@ interactionsRouter.post("/muted", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to mute as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -75,10 +102,20 @@ interactionsRouter.post("/muted", async (c) => {
   }
 });
 
-interactionsRouter.delete("/muted/:userId/:targetId", async (c) => {
+interactionsRouter.delete("/muted/:userId/:targetId", requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
     const targetId = c.req.param('targetId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to unmute as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(mutedUsers)
       .where(and(eq(mutedUsers.userId, userId), eq(mutedUsers.targetId, targetId)));
@@ -90,7 +127,7 @@ interactionsRouter.delete("/muted/:userId/:targetId", async (c) => {
 });
 
 // Poll Votes
-interactionsRouter.post("/polls", async (c) => {
+interactionsRouter.post("/polls", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['userId', 'postId', 'optionIndex']);
@@ -102,6 +139,14 @@ interactionsRouter.post("/polls", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to vote as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -117,10 +162,20 @@ interactionsRouter.post("/polls", async (c) => {
   }
 });
 
-interactionsRouter.delete("/polls/:userId/:postId", async (c) => {
+interactionsRouter.delete("/polls/:userId/:postId", requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
     const postId = c.req.param('postId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to remove vote as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(pollVotes)
       .where(and(eq(pollVotes.userId, userId), eq(pollVotes.postId, postId)));

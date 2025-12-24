@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const attachmentsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -22,7 +23,7 @@ attachmentsRouter.get("/:postId", async (c) => {
   }
 });
 
-attachmentsRouter.post("/", async (c) => {
+attachmentsRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['postId', 'mediaUrl', 'type']);
@@ -34,6 +35,15 @@ attachmentsRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow authenticated users to add attachments
+    // Ownership verification happens at post level
+    if (!auth.user) {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -53,9 +63,19 @@ attachmentsRouter.post("/", async (c) => {
   }
 });
 
-attachmentsRouter.delete("/:id", async (c) => {
+attachmentsRouter.delete("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
+    const auth = c.env.auth as any;
+    
+    // Only allow authenticated users to delete attachments
+    if (!auth.user) {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(postAttachments).where(eq(postAttachments.id, id));
     return c.json({ success: true }, 200);

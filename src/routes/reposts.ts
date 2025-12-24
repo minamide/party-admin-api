@@ -4,10 +4,11 @@ import { eq, and } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const repostsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
-repostsRouter.post("/", async (c) => {
+repostsRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['userId', 'postId']);
@@ -19,6 +20,14 @@ repostsRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to repost as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -33,10 +42,20 @@ repostsRouter.post("/", async (c) => {
   }
 });
 
-repostsRouter.delete("/:userId/:postId", async (c) => {
+repostsRouter.delete("/:userId/:postId", requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
     const postId = c.req.param('postId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to delete repost as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(reposts)
       .where(and(eq(reposts.userId, userId), eq(reposts.postId, postId)));

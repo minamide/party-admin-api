@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const listsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -18,7 +19,7 @@ listsRouter.get("/", async (c) => {
   }
 });
 
-listsRouter.post("/", async (c) => {
+listsRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['name', 'ownerId']);
@@ -30,6 +31,14 @@ listsRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to create list as themselves (unless admin)
+    if (body.ownerId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -65,11 +74,28 @@ listsRouter.get("/:id", async (c) => {
   }
 });
 
-listsRouter.put("/:id", async (c) => {
+listsRouter.put("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
+    const auth = c.env.auth as any;
     const db = getDb(c);
+    
+    // Check if list exists and user is owner or admin
+    const existing = await db.select().from(lists).where(eq(lists.id, id)).get();
+    if (!existing) {
+      return c.json(
+        createErrorResponse('リストが見つかりません', 'LIST_NOT_FOUND'),
+        404
+      );
+    }
+    if (existing.ownerId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const result = await db.update(lists)
       .set({
         name: body.name,
@@ -86,10 +112,27 @@ listsRouter.put("/:id", async (c) => {
   }
 });
 
-listsRouter.delete("/:id", async (c) => {
+listsRouter.delete("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
+    const auth = c.env.auth as any;
     const db = getDb(c);
+    
+    // Check if list exists and user is owner or admin
+    const existing = await db.select().from(lists).where(eq(lists.id, id)).get();
+    if (!existing) {
+      return c.json(
+        createErrorResponse('リストが見つかりません', 'LIST_NOT_FOUND'),
+        404
+      );
+    }
+    if (existing.ownerId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     await db.delete(lists).where(eq(lists.id, id));
     return c.json({ success: true }, 200);
   } catch (error: unknown) {

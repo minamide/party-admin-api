@@ -118,11 +118,15 @@ describe('Drafts Router', () => {
       const updateData = { content: 'Updated content' };
 
       const mockDb = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        get: vi.fn()
+          .mockResolvedValueOnce({ id: 'draft-1', userId: 'test-user-id' }) // First call: check ownership
+          .mockResolvedValueOnce({ id: 'draft-1', ...updateData }), // Second call: return updated draft
         update: vi.fn().mockReturnThis(),
         set: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
         returning: vi.fn().mockReturnThis(),
-        get: vi.fn().mockResolvedValue({ id: 'draft-1', ...updateData }),
       };
 
       mockGetDb.mockReturnValue(mockDb as any);
@@ -142,8 +146,11 @@ describe('Drafts Router', () => {
   describe('DELETE /:id', () => {
     it('should delete draft', async () => {
       const mockDb = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        get: vi.fn().mockResolvedValue({ id: 'draft-1', userId: 'test-user-id' }),
         delete: vi.fn().mockReturnThis(),
-        where: vi.fn().mockResolvedValue(undefined),
       };
 
       mockGetDb.mockReturnValue(mockDb as any);

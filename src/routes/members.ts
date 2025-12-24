@@ -4,11 +4,12 @@ import { eq, and } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const membersRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 // Community Members
-membersRouter.post("/community", async (c) => {
+membersRouter.post("/community", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['userId', 'communityId']);
@@ -20,6 +21,14 @@ membersRouter.post("/community", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to join as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -35,10 +44,20 @@ membersRouter.post("/community", async (c) => {
   }
 });
 
-membersRouter.delete("/community/:userId/:communityId", async (c) => {
+membersRouter.delete("/community/:userId/:communityId", requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
     const communityId = c.req.param('communityId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to leave as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(communityMembers)
       .where(and(eq(communityMembers.userId, userId), eq(communityMembers.communityId, communityId)));
@@ -50,7 +69,7 @@ membersRouter.delete("/community/:userId/:communityId", async (c) => {
 });
 
 // List Members
-membersRouter.post("/list", async (c) => {
+membersRouter.post("/list", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['listId', 'userId']);
@@ -62,6 +81,14 @@ membersRouter.post("/list", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to add as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -76,10 +103,20 @@ membersRouter.post("/list", async (c) => {
   }
 });
 
-membersRouter.delete("/list/:listId/:userId", async (c) => {
+membersRouter.delete("/list/:listId/:userId", requireAuth, async (c) => {
   try {
     const listId = c.req.param('listId');
     const userId = c.req.param('userId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to remove as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(listMembers)
       .where(and(eq(listMembers.listId, listId), eq(listMembers.userId, userId)));
@@ -91,7 +128,7 @@ membersRouter.delete("/list/:listId/:userId", async (c) => {
 });
 
 // List Subscribers
-membersRouter.post("/subscriber", async (c) => {
+membersRouter.post("/subscriber", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['listId', 'userId']);
@@ -103,6 +140,14 @@ membersRouter.post("/subscriber", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to subscribe as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -117,10 +162,20 @@ membersRouter.post("/subscriber", async (c) => {
   }
 });
 
-membersRouter.delete("/subscriber/:listId/:userId", async (c) => {
+membersRouter.delete("/subscriber/:listId/:userId", requireAuth, async (c) => {
   try {
     const listId = c.req.param('listId');
     const userId = c.req.param('userId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to unsubscribe as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(listSubscribers)
       .where(and(eq(listSubscribers.listId, listId), eq(listSubscribers.userId, userId)));

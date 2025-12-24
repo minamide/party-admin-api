@@ -4,22 +4,89 @@ import { eq, desc } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
+
+// Helper: ポストを親情報と一緒に取得
+async function getPostWithParent(db: any, postId: string) {
+  const post = await db.select().from(posts).where(eq(posts.id, postId)).get();
+  
+  if (!post) return null;
+
+  // 親ポストがある場合は取得
+  let parent = null;
+  if (post.parentId) {
+    parent = await db.select().from(posts).where(eq(posts.id, post.parentId)).get();
+  }
+
+  // ルートポストがある場合は取得
+  let root = null;
+  if (post.rootId && post.rootId !== post.parentId) {
+    root = await db.select().from(posts).where(eq(posts.id, post.rootId)).get();
+  }
+
+  // 参照ポストがある場合は取得（リポスト等）
+  let reference = null;
+  if (post.referencePostId) {
+    reference = await db.select().from(posts).where(eq(posts.id, post.referencePostId)).get();
+  }
+
+  return {
+    ...post,
+    parent,
+    root,
+    reference,
+  };
+}
+
+// Helper: 複数ポストを親情報と一緒に取得
+async function getPostsWithParents(db: any, postList: any[]) {
+  return Promise.all(
+    postList.map(async (post) => {
+      let parent = null;
+      let root = null;
+      let reference = null;
+
+      if (post.parentId) {
+        parent = await db.select().from(posts).where(eq(posts.id, post.parentId)).get();
+      }
+
+      if (post.rootId && post.rootId !== post.parentId) {
+        root = await db.select().from(posts).where(eq(posts.id, post.rootId)).get();
+      }
+
+      if (post.referencePostId) {
+        reference = await db.select().from(posts).where(eq(posts.id, post.referencePostId)).get();
+      }
+
+      return {
+        ...post,
+        parent,
+        root,
+        reference,
+      };
+    })
+  );
+}
 
 export const postsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
+// GET /posts - リスト取得（認証不要）
 postsRouter.get("/", async (c) => {
   try {
     const db = getDb(c);
     const result = await db.select().from(posts).orderBy(desc(posts.createdAt)).all();
-    return c.json(result, 200);
+    const postsWithParents = await getPostsWithParents(db, result);
+    return c.json(postsWithParents, 200);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     return c.json(createErrorResponse(message, 'POSTS_LIST_ERROR'), 500);
   }
 });
 
-postsRouter.post("/", async (c) => {
+// POST /posts - ポスト作成（認証必須）
+postsRouter.post("/", requireAuth, async (c) => {
   try {
+    const auth = c.env.auth as any;
     const body = await c.req.json();
     
     // Validation
@@ -32,6 +99,14 @@ postsRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+
+    // 自分のポストのみ作成可能
+    if (auth.user.userId !== body.authorId) {
+      return c.json(
+        createErrorResponse('Forbidden: can only create your own posts', 'FORBIDDEN'),
+        403
       );
     }
 
@@ -58,7 +133,7 @@ postsRouter.get("/:id", async (c) => {
   try {
     const id = c.req.param('id');
     const db = getDb(c);
-    const result = await db.select().from(posts).where(eq(posts.id, id)).get();
+    const result = await getPostWithParent(db, id);
     
     if (!result) {
       return c.json(
@@ -74,11 +149,29 @@ postsRouter.get("/:id", async (c) => {
   }
 });
 
-postsRouter.put("/:id", async (c) => {
+postsRouter.put("/:id", requireAuth, async (c) => {
   try {
+    const auth = c.env.auth as any;
     const id = c.req.param('id');
     const body = await c.req.json();
     const db = getDb(c);
+
+    // ポストの所有者を確認
+    const post = await db.select().from(posts).where(eq(posts.id, id)).get();
+    if (!post) {
+      return c.json(
+        createErrorResponse('投稿が見つかりません', 'POST_NOT_FOUND'),
+        404
+      );
+    }
+
+    // 自分のポストか管理者のみ編集可能
+    if (auth.user.userId !== post.authorId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('Forbidden: can only edit your own posts', 'FORBIDDEN'),
+        403
+      );
+    }
 
     const result = await db.update(posts)
       .set({
@@ -97,10 +190,29 @@ postsRouter.put("/:id", async (c) => {
   }
 });
 
-postsRouter.delete("/:id", async (c) => {
+// DELETE /posts/:id - ポスト削除（認証必須）
+postsRouter.delete("/:id", requireAuth, async (c) => {
   try {
+    const auth = c.env.auth as any;
     const id = c.req.param('id');
     const db = getDb(c);
+
+    // ポストの所有者を確認
+    const post = await db.select().from(posts).where(eq(posts.id, id)).get();
+    if (!post) {
+      return c.json(
+        createErrorResponse('投稿が見つかりません', 'POST_NOT_FOUND'),
+        404
+      );
+    }
+
+    // 自分のポストか管理者のみ削除可能
+    if (auth.user.userId !== post.authorId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('Forbidden: can only delete your own posts', 'FORBIDDEN'),
+        403
+      );
+    }
     
     await db.delete(posts).where(eq(posts.id, id));
     return c.json({ success: true }, 200);

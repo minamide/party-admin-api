@@ -1,0 +1,234 @@
+
+> test
+> vitest --run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mC:/Users/minamide/workspace/cloudflear/d1_project/party-admin-api[39m
+
+ [31m❯[39m src/routes/posts.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 108[2mms[22m[39m
+       [32m✓[39m should return list of posts with 200 status[32m 46[2mms[22m[39m
+       [32m✓[39m should return 500 on database error[32m 5[2mms[22m[39m
+[31m       [31m×[31m should create post with valid authorId and return 201[39m[32m 45[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing authorId[39m[32m 6[2mms[22m[39m
+ [31m❯[39m src/routes/likes.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 131[2mms[22m[39m
+[31m       [31m×[31m should create like with valid userId and postId[39m[32m 88[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing userId or postId[39m[32m 10[2mms[22m[39m
+[31m       [31m×[31m should return 400 on database error when creating like[39m[32m 11[2mms[22m[39m
+[31m       [31m×[31m should delete like and return 200[39m[32m 8[2mms[22m[39m
+[31m       [31m×[31m should return 400 on database error when deleting like[39m[32m 9[2mms[22m[39m
+ [31m❯[39m src/routes/bookmarks.d1.test.ts [2m([22m[2m10 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 111[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create bookmark[39m[32m 38[2mms[22m[39m
+       [32m✓[39m should handle GET / - list user bookmarks[32m 4[2mms[22m[39m
+       [32m✓[39m should handle GET /:id - get specific bookmark[32m 28[2mms[22m[39m
+       [32m✓[39m should handle DELETE /:id - remove bookmark[32m 6[2mms[22m[39m
+       [32m✓[39m should support collection-based organization[32m 4[2mms[22m[39m
+       [32m✓[39m should support date filtering[32m 4[2mms[22m[39m
+       [32m✓[39m should support sorting options[32m 3[2mms[22m[39m
+[31m       [31m×[31m should handle duplicate bookmarks[39m[32m 9[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent bookmark[32m 6[2mms[22m[39m
+       [32m✓[39m should handle large bookmark collections efficiently[32m 3[2mms[22m[39m
+ [31m❯[39m src/routes/notifications.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 82[2mms[22m[39m
+       [32m✓[39m should return user notifications[32m 22[2mms[22m[39m
+[31m       [31m×[31m should create notification[39m[32m 43[2mms[22m[39m
+[31m       [31m×[31m should update notification[39m[32m 11[2mms[22m[39m
+ [31m❯[39m src/routes/bookmarks.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 113[2mms[22m[39m
+[31m       [31m×[31m should create bookmark with valid data[39m[32m 54[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing fields[39m[32m 21[2mms[22m[39m
+[31m       [31m×[31m should delete bookmark[39m[32m 9[2mms[22m[39m
+       [32m✓[39m should return user bookmarks[32m 21[2mms[22m[39m
+ [31m❯[39m src/routes/posts.d1.test.ts [2m([22m[2m13 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[32m 211[2mms[22m[39m
+       [32m✓[39m should handle GET / - list posts[32m 45[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create post with valid data[39m[32m 76[2mms[22m[39m
+       [32m✓[39m should handle GET /:id - retrieve specific post[32m 9[2mms[22m[39m
+[31m       [31m×[31m should handle PUT /:id - update post[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should handle DELETE /:id - delete post[39m[32m 5[2mms[22m[39m
+       [32m✓[39m should handle GET /:id/likes - get post likes[32m 14[2mms[22m[39m
+[31m       [31m×[31m should support parent/child post relationships[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should return 400 for invalid post data[39m[32m 5[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent post ID[32m 6[2mms[22m[39m
+[31m       [31m×[31m should handle malformed JSON gracefully[39m[32m 5[2mms[22m[39m
+       [32m✓[39m should maintain ACID properties across operations[32m 3[2mms[22m[39m
+       [32m✓[39m should handle list query with pagination[32m 9[2mms[22m[39m
+       [32m✓[39m should return consistent response times for repeated queries[32m 14[2mms[22m[39m
+ [31m❯[39m src/routes/users.d1.test.ts [2m([22m[2m15 tests[22m[2m | [22m[31m11 failed[39m[2m)[22m[32m 164[2mms[22m[39m
+       [32m✓[39m should handle GET / - list all users[32m 38[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create new user[39m[32m 19[2mms[22m[39m
+[31m       [31m×[31m should handle GET /:id - retrieve specific user[39m[32m 8[2mms[22m[39m
+[31m       [31m×[31m should handle PUT /:id - update user data[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should handle DELETE /:id - delete user[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should validate email format[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should validate handle format[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should require all mandatory fields[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should return 404 for non-existent user[39m[32m 9[2mms[22m[39m
+[31m       [31m×[31m should handle malformed JSON gracefully[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should handle missing Content-Type header[39m[32m 2[2mms[22m[39m
+       [32m✓[39m should maintain user-profile relationships[32m 1[2mms[22m[39m
+       [32m✓[39m should handle multiple concurrent requests[32m 19[2mms[22m[39m
+       [32m✓[39m should process requests within acceptable time[32m 5[2mms[22m[39m
+[31m       [31m×[31m should handle multiple user creations[39m[32m 28[2mms[22m[39m
+ [31m❯[39m src/routes/conversations.d1.test.ts [2m([22m[2m12 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 137[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create conversation[39m[32m 41[2mms[22m[39m
+       [32m✓[39m should handle GET / - list conversations[32m 21[2mms[22m[39m
+       [32m✓[39m should handle GET /:id - get conversation details[32m 5[2mms[22m[39m
+       [32m✓[39m should support adding messages to conversation[32m 4[2mms[22m[39m
+       [32m✓[39m should retrieve conversation messages[32m 5[2mms[22m[39m
+       [32m✓[39m should support message deletion[32m 3[2mms[22m[39m
+       [32m✓[39m should manage participant list[32m 4[2mms[22m[39m
+       [32m✓[39m should support adding participants[32m 5[2mms[22m[39m
+[31m       [31m×[31m should handle invalid participant count[39m[32m 6[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent conversation[32m 7[2mms[22m[39m
+       [32m✓[39m should efficiently retrieve conversation history[32m 14[2mms[22m[39m
+       [32m✓[39m should handle concurrent messaging[32m 13[2mms[22m[39m
+ [31m❯[39m src/routes/notifications.d1.test.ts [2m([22m[2m17 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 111[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create notification[39m[32m 33[2mms[22m[39m
+       [32m✓[39m should handle GET / - list user notifications[32m 3[2mms[22m[39m
+       [32m✓[39m should handle GET /:id - get notification details[32m 27[2mms[22m[39m
+       [32m✓[39m should handle PATCH /:id - mark as read[32m 3[2mms[22m[39m
+       [32m✓[39m should handle DELETE /:id - delete notification[32m 2[2mms[22m[39m
+       [32m✓[39m should support like notifications[32m 2[2mms[22m[39m
+       [32m✓[39m should support follow notifications[32m 2[2mms[22m[39m
+       [32m✓[39m should support mention notifications[32m 2[2mms[22m[39m
+       [32m✓[39m should support reply notifications[32m 3[2mms[22m[39m
+       [32m✓[39m should support read/unread filtering[32m 2[2mms[22m[39m
+       [32m✓[39m should support date range filtering[32m 3[2mms[22m[39m
+       [32m✓[39m should support pagination[32m 2[2mms[22m[39m
+       [32m✓[39m should support marking multiple as read[32m 2[2mms[22m[39m
+       [32m✓[39m should support deleting multiple notifications[32m 3[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent notification[32m 6[2mms[22m[39m
+[31m       [31m×[31m should handle invalid notification type[39m[32m 6[2mms[22m[39m
+       [32m✓[39m should efficiently retrieve large notification lists[32m 2[2mms[22m[39m
+ [31m❯[39m src/routes/likes.d1.test.ts [2m([22m[2m9 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 72[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create like[39m[32m 33[2mms[22m[39m
+       [32m✓[39m should handle GET / - list likes[32m 5[2mms[22m[39m
+       [32m✓[39m should handle GET /:id - get like[32m 3[2mms[22m[39m
+       [32m✓[39m should handle DELETE /:id - remove like[32m 3[2mms[22m[39m
+[31m       [31m×[31m should support post-like relationships[39m[32m 4[2mms[22m[39m
+       [32m✓[39m should support user-like relationships[32m 2[2mms[22m[39m
+[31m       [31m×[31m should handle missing required fields[39m[32m 4[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent like[32m 2[2mms[22m[39m
+[31m       [31m×[31m should handle multiple concurrent likes[39m[32m 10[2mms[22m[39m
+ [31m❯[39m src/routes/follows.d1.test.ts [2m([22m[2m13 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 126[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create follow[39m[32m 43[2mms[22m[39m
+       [32m✓[39m should handle GET / - list follows[32m 4[2mms[22m[39m
+       [32m✓[39m should handle GET /followers/:id - get followers[32m 4[2mms[22m[39m
+       [32m✓[39m should handle GET /following/:id - get following[32m 3[2mms[22m[39m
+       [32m✓[39m should handle DELETE /:id - unfollow[32m 3[2mms[22m[39m
+[31m       [31m×[31m should prevent self-follow[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should handle bidirectional follows[39m[32m 17[2mms[22m[39m
+       [32m✓[39m should support follow status checking[32m 8[2mms[22m[39m
+[31m       [31m×[31m should handle duplicate follows[39m[32m 9[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent follow[32m 3[2mms[22m[39m
+       [32m✓[39m should efficiently retrieve follower list[32m 3[2mms[22m[39m
+       [32m✓[39m should handle follow graph queries efficiently[32m 3[2mms[22m[39m
+[31m       [31m×[31m should support concurrent follow operations[39m[32m 15[2mms[22m[39m
+ [31m❯[39m src/routes/communities.d1.test.ts [2m([22m[2m11 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 144[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create community[39m[32m 44[2mms[22m[39m
+       [32m✓[39m should handle GET / - list communities[32m 19[2mms[22m[39m
+       [32m✓[39m should handle GET /:id - get community details[32m 14[2mms[22m[39m
+[31m       [31m×[31m should handle PUT /:id - update community[39m[32m 7[2mms[22m[39m
+       [32m✓[39m should support member joining[32m 5[2mms[22m[39m
+       [32m✓[39m should support member listing[32m 5[2mms[22m[39m
+       [32m✓[39m should support member removal[32m 2[2mms[22m[39m
+[31m       [31m×[31m should support moderation actions[39m[32m 9[2mms[22m[39m
+[31m       [31m×[31m should handle invalid community slug[39m[32m 6[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent community[32m 23[2mms[22m[39m
+       [32m✓[39m should handle large member lists efficiently[32m 4[2mms[22m[39m
+ [31m❯[39m src/routes/users.test.ts [2m([22m[2m13 tests[22m[2m | [22m[31m11 failed[39m[2m)[22m[32m 106[2mms[22m[39m
+       [32m✓[39m should return list of users with 200 status[32m 22[2mms[22m[39m
+       [32m✓[39m should return 500 on database error[32m 6[2mms[22m[39m
+[31m       [31m×[31m should create user with valid data and return 201[39m[32m 22[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing required fields[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should return 400 for invalid handle format[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should return 400 for invalid email format[39m[32m 13[2mms[22m[39m
+[31m       [31m×[31m should return user by id with 200 status[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should return 404 when user not found[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should return 500 on database error[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should update user and return 200[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should return 400 for invalid email during update[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should delete user and return 200 with success[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should return 400 on database error during delete[39m[32m 3[2mms[22m[39m
+ [31m❯[39m src/routes/posts.integration.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 62[2mms[22m[39m
+[31m       [31m×[31m should create a post with valid data[39m[32m 31[2mms[22m[39m
+       [32m✓[39m should return posts list or error[32m 17[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent post[32m 6[2mms[22m[39m
+ [31m❯[39m src/routes/members.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 89[2mms[22m[39m
+[31m         [31m×[31m should add community member[39m[32m 55[2mms[22m[39m
+[31m         [31m×[31m should return 400 for missing fields[39m[32m 7[2mms[22m[39m
+[31m         [31m×[31m should remove community member[39m[32m 8[2mms[22m[39m
+[31m         [31m×[31m should add list member[39m[32m 6[2mms[22m[39m
+[31m         [31m×[31m should remove list member[39m[32m 6[2mms[22m[39m
+ [32m✓[39m src/routes/health.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [31m❯[39m src/routes/lists.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 66[2mms[22m[39m
+       [32m✓[39m should return list of lists[32m 21[2mms[22m[39m
+[31m       [31m×[31m should create list with valid data[39m[32m 30[2mms[22m[39m
+       [32m✓[39m should return list by id[32m 6[2mms[22m[39m
+       [32m✓[39m should return 404 when list not found[32m 4[2mms[22m[39m
+ [31m❯[39m src/routes/events.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 63[2mms[22m[39m
+[31m       [31m×[31m should create event attendance[39m[32m 41[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing fields[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should update attendance status[39m[32m 8[2mms[22m[39m
+[31m       [31m×[31m should delete attendance[39m[32m 5[2mms[22m[39m
+ [31m❯[39m src/routes/attachments.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 68[2mms[22m[39m
+       [32m✓[39m should return post attachments[32m 19[2mms[22m[39m
+[31m       [31m×[31m should create attachment[39m[32m 27[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing fields[39m[32m 7[2mms[22m[39m
+[31m       [31m×[31m should delete attachment[39m[32m 5[2mms[22m[39m
+         [32m✓[39m should return media versions[32m 4[2mms[22m[39m
+ [31m❯[39m src/routes/settings.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 61[2mms[22m[39m
+       [32m✓[39m should return user settings[32m 18[2mms[22m[39m
+       [32m✓[39m should return 404 when settings not found[32m 5[2mms[22m[39m
+       [32m✓[39m should return 500 on database error[32m 3[2mms[22m[39m
+[31m       [31m×[31m should update user settings[39m[32m 24[2mms[22m[39m
+[31m       [31m×[31m should return 400 on update error[39m[32m 7[2mms[22m[39m
+ [31m❯[39m src/routes/reports.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 70[2mms[22m[39m
+       [32m✓[39m should return list of reports[32m 17[2mms[22m[39m
+[31m       [31m×[31m should create report with valid data[39m[32m 32[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing fields[39m[32m 6[2mms[22m[39m
+[31m       [31m×[31m should update report status[39m[32m 8[2mms[22m[39m
+ [31m❯[39m src/routes/follows.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 66[2mms[22m[39m
+[31m       [31m×[31m should create follow relationship[39m[32m 40[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing fields[39m[32m 8[2mms[22m[39m
+[31m       [31m×[31m should delete follow relationship[39m[32m 7[2mms[22m[39m
+       [32m✓[39m should return followers list[32m 6[2mms[22m[39m
+ [31m❯[39m src/routes/reposts.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 51[2mms[22m[39m
+[31m       [31m×[31m should create repost with valid data[39m[32m 36[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing fields[39m[32m 5[2mms[22m[39m
+[31m       [31m×[31m should delete repost[39m[32m 6[2mms[22m[39m
+ [31m❯[39m src/routes/users.integration.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m5 failed[39m[2m)[22m[32m 67[2mms[22m[39m
+[31m       [31m×[31m should create a user with valid data or return error[39m[32m 32[2mms[22m[39m
+[31m       [31m×[31m should fail without required fields[39m[32m 3[2mms[22m[39m
+       [32m✓[39m should return users list or empty array[32m 13[2mms[22m[39m
+[31m       [31m×[31m should return 404 for non-existent user[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should return error or success for update[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should return error or success for deletion[39m[32m 3[2mms[22m[39m
+       [32m✓[39m should maintain data consistency across requests[32m 3[2mms[22m[39m
+ [31m❯[39m src/routes/conversations.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 237[2mms[22m[39m
+       [32m✓[39m should return list of conversations[32m 204[2mms[22m[39m
+[31m       [31m×[31m should create conversation[39m[32m 24[2mms[22m[39m
+       [32m✓[39m should return messages in conversation[32m 3[2mms[22m[39m
+       [32m✓[39m should return conversation participants[32m 2[2mms[22m[39m
+ [31m❯[39m src/routes/drafts.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 51[2mms[22m[39m
+       [32m✓[39m should return user drafts[32m 14[2mms[22m[39m
+[31m       [31m×[31m should create draft[39m[32m 23[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing fields[39m[32m 4[2mms[22m[39m
+[31m       [31m×[31m should update draft[39m[32m 3[2mms[22m[39m
+[31m       [31m×[31m should delete draft[39m[32m 3[2mms[22m[39m
+ [31m❯[39m src/routes/interactions.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[32m 46[2mms[22m[39m
+[31m         [31m×[31m should block user[39m[32m 31[2mms[22m[39m
+[31m         [31m×[31m should unblock user[39m[32m 4[2mms[22m[39m
+[31m         [31m×[31m should mute user[39m[32m 4[2mms[22m[39m
+[31m         [31m×[31m should unmute user[39m[32m 4[2mms[22m[39m
+ [31m❯[39m src/routes/communities.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 41[2mms[22m[39m
+       [32m✓[39m should return list of communities[32m 15[2mms[22m[39m
+       [32m✓[39m should return 500 on database error[32m 3[2mms[22m[39m
+[31m       [31m×[31m should create community with valid data[39m[32m 16[2mms[22m[39m
+[31m       [31m×[31m should return 400 for missing name or ownerId[39m[32m 3[2mms[22m[39m
+ [32m✓[39m src/routes/auth.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1863[2mms[22m[39m
+       [33m[2m✓[22m[39m should reject an expired token [33m 1112[2mms[22m[39m
+ [32m✓[39m src/routes/hashtags.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m27 failed[39m[22m[2m | [22m[1m[32m3 passed[39m[22m[90m (30)[39m
+[2m      Tests [22m [1m[31m100 failed[39m[22m[2m | [22m[1m[32m106 passed[39m[22m[90m (206)[39m
+[2m   Start at [22m 02:09:47
+[2m   Duration [22m 13.90s[2m (transform 8.80s, setup 0ms, import 81.49s, tests 4.57s, environment 80.90s)[22m
+

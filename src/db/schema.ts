@@ -4,8 +4,10 @@ import { sql } from 'drizzle-orm';
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
-  email: text('email'),
+  email: text('email').unique(),
   handle: text('handle').notNull().unique(),
+  passwordHash: text('password_hash'),
+  passwordSalt: text('password_salt'),
   role: text('role').notNull().default('user'),
   bio: text('bio'),
   location: text('location'),
@@ -268,3 +270,34 @@ export const postMediaVersions = sqliteTable('post_media_versions', {
   metadata: text('metadata'), // JSON
   createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+/**
+ * ソーシャルアカウント連携テーブル
+ * ユーザーが複数のOAuthプロバイダーでアカウントを連携可能
+ */
+export const socialAccounts = sqliteTable('social_accounts', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider').notNull(), // 'google', 'github', 'x', 'line'
+  providerUserId: text('provider_user_id').notNull(),
+  email: text('email'),
+  name: text('name'),
+  avatar: text('avatar'),
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token'),
+  tokenExpiresAt: text('token_expires_at'),
+  linkedAt: text('linked_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+/**
+ * OAuth State テーブル
+ * CSRF 攻撃対策用の state 検証
+ */
+export const oauthStates = sqliteTable('oauth_states', {
+  state: text('state').primaryKey(),
+  provider: text('provider').notNull(),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text('expires_at').notNull(),
+});
+

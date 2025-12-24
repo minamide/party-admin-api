@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { authRouter } from './routes/auth';
+import { oauthRouter } from './routes/oauth';
 import { usersRouter } from './routes/users';
 import { postsRouter } from './routes/posts';
 import { communitiesRouter } from './routes/communities';
@@ -18,8 +20,13 @@ import { attachmentsRouter } from './routes/attachments';
 import { hashtagsRouter } from './routes/hashtags';
 import { settingsRouter } from './routes/settings';
 import { healthRouter } from './routes/health';
+import { authMiddleware } from './middleware/auth';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
+
+// ==================== AUTHENTICATION MIDDLEWARE ====================
+// Apply JWT authentication to all routes
+app.use('*', authMiddleware);
 
 // ==================== FILE-BASED ROUTING ====================
 // Routes are automatically registered based on imported route modules
@@ -29,6 +36,8 @@ type RouteEntry = [string, Hono<{ Bindings: CloudflareBindings }>];
 
 // Centralized route registry (file-pattern style)
 const routes: RouteEntry[] = [
+  ['auth', authRouter],
+  ['oauth', oauthRouter],
   ['users', usersRouter],
   ['posts', postsRouter],
   ['communities', communitiesRouter],

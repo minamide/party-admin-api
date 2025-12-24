@@ -4,6 +4,7 @@ import { eq, desc } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const notificationsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -22,7 +23,7 @@ notificationsRouter.get("/:userId", async (c) => {
   }
 });
 
-notificationsRouter.post("/", async (c) => {
+notificationsRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['recipientId', 'type']);
@@ -34,6 +35,14 @@ notificationsRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Notifications are typically sent by system/admin
+    if (auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -52,11 +61,28 @@ notificationsRouter.post("/", async (c) => {
   }
 });
 
-notificationsRouter.put("/:id", async (c) => {
+notificationsRouter.put("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
+    const auth = c.env.auth as any;
     const db = getDb(c);
+    
+    // Check if notification exists and belongs to authenticated user
+    const existing = await db.select().from(notifications).where(eq(notifications.id, id)).get();
+    if (!existing) {
+      return c.json(
+        createErrorResponse('通知が見つかりません', 'NOTIFICATION_NOT_FOUND'),
+        404
+      );
+    }
+    if (existing.recipientId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const result = await db.update(notifications)
       .set({ isRead: body.isRead ? 1 : 0 })
       .where(eq(notifications.id, id))

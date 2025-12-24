@@ -100,11 +100,15 @@ describe('Notifications Router', () => {
       const updateData = { isRead: true };
 
       const mockDb = {
+        select: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        get: vi.fn()
+          .mockResolvedValueOnce({ id: 'notif-1', userId: 'test-user-id' }) // First call: check ownership
+          .mockResolvedValueOnce({ id: 'notif-1', ...updateData }), // Second call: return updated notification
         update: vi.fn().mockReturnThis(),
         set: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
         returning: vi.fn().mockReturnThis(),
-        get: vi.fn().mockResolvedValue({ id: 'notif-1', ...updateData }),
       };
 
       mockGetDb.mockReturnValue(mockDb as any);

@@ -46,8 +46,8 @@ describe('Posts Router', () => {
   describe('GET /', () => {
     it('should return list of posts with 200 status', async () => {
       const mockPosts = [
-        { id: 'post-1', authorId: 'user-1', content: 'Hello', type: 'text', visibility: 'public', createdAt: new Date().toISOString() },
-        { id: 'post-2', authorId: 'user-2', content: 'World', type: 'text', visibility: 'public', createdAt: new Date().toISOString() },
+        { id: 'post-1', authorId: 'user-1', content: 'Hello', type: 'text', visibility: 'public', createdAt: new Date().toISOString(), parent: null, root: null, reference: null },
+        { id: 'post-2', authorId: 'user-2', content: 'World', type: 'text', visibility: 'public', createdAt: new Date().toISOString(), parent: null, root: null, reference: null },
       ];
 
       const mockDb = {
@@ -55,6 +55,8 @@ describe('Posts Router', () => {
         from: vi.fn().mockReturnThis(),
         orderBy: vi.fn().mockReturnThis(),
         all: vi.fn().mockResolvedValue(mockPosts),
+        where: vi.fn().mockReturnThis(),
+        get: vi.fn().mockResolvedValue(null), // 親取得用
       };
 
       mockGetDb.mockReturnValue(mockDb as any);
@@ -87,7 +89,7 @@ describe('Posts Router', () => {
   describe('POST /', () => {
     it('should create post with valid authorId and return 201', async () => {
       const newPost = {
-        authorId: 'user-1',
+        authorId: 'test-user-id',  // テスト用 auth ユーザーID
         content: 'New post',
         type: 'text',
         visibility: 'public',

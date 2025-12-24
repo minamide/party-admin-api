@@ -4,9 +4,11 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired, isValidEmail, isValidHandle } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const usersRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
+// GET /users - リスト取得（認証不要 - 公開API）
 usersRouter.get("/", async (c) => {
   try {
     const db = getDb(c);
@@ -18,8 +20,10 @@ usersRouter.get("/", async (c) => {
   }
 });
 
-usersRouter.post("/", async (c) => {
+// POST /users - ユーザー作成（認証必須）
+usersRouter.post("/", requireAuth, async (c) => {
   try {
+    const auth = c.env.auth as any;
     const body = await c.req.json();
     
     // Validation
@@ -71,7 +75,8 @@ usersRouter.post("/", async (c) => {
   }
 });
 
-usersRouter.get("/:id", async (c) => {
+// GET /users/:id - ユーザー詳細取得（認証必須）
+usersRouter.get("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
     const db = getDb(c);
@@ -91,11 +96,21 @@ usersRouter.get("/:id", async (c) => {
   }
 });
 
-usersRouter.put("/:id", async (c) => {
+// PUT /users/:id - ユーザー更新（認証必須）
+usersRouter.put("/:id", requireAuth, async (c) => {
   try {
+    const auth = c.env.auth as any;
     const id = c.req.param('id');
     const body = await c.req.json();
     const db = getDb(c);
+
+    // 自分のプロフィール、または管理者のみ編集可能
+    if (auth.user.userId !== id && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('Forbidden: cannot edit other users', 'FORBIDDEN'),
+        403
+      );
+    }
 
     if (body.email && !isValidEmail(body.email)) {
       return c.json(
@@ -124,9 +139,20 @@ usersRouter.put("/:id", async (c) => {
   }
 });
 
-usersRouter.delete("/:id", async (c) => {
+// DELETE /users/:id - ユーザー削除（認証必須、管理者のみ）
+usersRouter.delete("/:id", requireAuth, async (c) => {
   try {
+    const auth = c.env.auth as any;
     const id = c.req.param('id');
+
+    // 管理者のみ削除可能
+    if (auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('Forbidden: only admins can delete users', 'FORBIDDEN'),
+        403
+      );
+    }
+
     const db = getDb(c);
     
     await db.delete(users).where(eq(users.id, id));

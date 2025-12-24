@@ -3,11 +3,10 @@ import { follows, users } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
-import { validateRequired } from '../utils/validation';
-
+import { validateRequired } from '../utils/validation';import { requireAuth } from '../middleware/auth';
 export const followsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
-followsRouter.post("/", async (c) => {
+followsRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['followerId', 'followingId']);
@@ -19,6 +18,14 @@ followsRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to follow as themselves (unless admin)
+    if (body.followerId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -33,10 +40,20 @@ followsRouter.post("/", async (c) => {
   }
 });
 
-followsRouter.delete("/:followerId/:followingId", async (c) => {
+followsRouter.delete("/:followerId/:followingId", requireAuth, async (c) => {
   try {
     const followerId = c.req.param('followerId');
     const followingId = c.req.param('followingId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to unfollow as themselves (unless admin)
+    if (followerId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(follows)
       .where(and(eq(follows.followerId, followerId), eq(follows.followingId, followingId)));

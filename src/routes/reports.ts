@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const reportsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -18,7 +19,7 @@ reportsRouter.get("/", async (c) => {
   }
 });
 
-reportsRouter.post("/", async (c) => {
+reportsRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['reporterId', 'targetId', 'reason']);
@@ -30,6 +31,14 @@ reportsRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to report as themselves (unless admin)
+    if (body.reporterId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -47,10 +56,20 @@ reportsRouter.post("/", async (c) => {
   }
 });
 
-reportsRouter.put("/:id", async (c) => {
+reportsRouter.put("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
+    const auth = c.env.auth as any;
+    
+    // Only admins can update report status
+    if (auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     const result = await db.update(reports)
       .set({ status: body.status })

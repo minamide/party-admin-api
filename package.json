@@ -9,7 +9,9 @@
 		"drizzle:migrate": "wrangler d1 migrations apply party-admin-db --local",
 		"test": "vitest",
 		"test:ui": "vitest --ui",
-		"test:coverage": "vitest --coverage"
+		"test:coverage": "vitest --coverage",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
+		"test:d1": "vitest run --config vitest.d1.config.ts"
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.45.1",

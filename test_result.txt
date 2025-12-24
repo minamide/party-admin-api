@@ -1,0 +1,234 @@
+
+> test
+> vitest --run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90mC:/Users/minamide/workspace/cloudflear/d1_project/party-admin-api[39m
+
+ [32m✓[39m src/routes/bookmarks.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m src/routes/lists.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [31m❯[39m src/routes/posts.test.ts [2m([22m[2m4 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 76[2mms[22m[39m
+       [32m✓[39m should return list of posts with 200 status[32m 31[2mms[22m[39m
+       [32m✓[39m should return 500 on database error[32m 10[2mms[22m[39m
+[31m       [31m×[31m should create post with valid authorId and return 201[39m[32m 27[2mms[22m[39m
+       [32m✓[39m should return 400 for missing authorId[32m 4[2mms[22m[39m
+ [32m✓[39m src/routes/users.integration.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+ [32m✓[39m src/routes/bookmarks.d1.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m src/routes/communities.d1.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 94[2mms[22m[39m
+ [31m❯[39m src/routes/notifications.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 84[2mms[22m[39m
+       [32m✓[39m should return user notifications[32m 20[2mms[22m[39m
+       [32m✓[39m should create notification[32m 10[2mms[22m[39m
+[31m       [31m×[31m should update notification[39m[32m 50[2mms[22m[39m
+ [32m✓[39m src/routes/notifications.d1.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+ [32m✓[39m src/routes/conversations.d1.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 126[2mms[22m[39m
+ [31m❯[39m src/routes/posts.integration.test.ts [2m([22m[2m3 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 71[2mms[22m[39m
+[31m       [31m×[31m should create a post with valid data[39m[32m 35[2mms[22m[39m
+       [32m✓[39m should return posts list or error[32m 22[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent post[32m 5[2mms[22m[39m
+ [32m✓[39m src/routes/likes.d1.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+ [31m❯[39m src/routes/users.test.ts [2m([22m[2m13 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 134[2mms[22m[39m
+       [32m✓[39m should return list of users with 200 status[32m 23[2mms[22m[39m
+       [32m✓[39m should return 500 on database error[32m 4[2mms[22m[39m
+[31m       [31m×[31m should create user with valid data and return 201[39m[32m 58[2mms[22m[39m
+       [32m✓[39m should return 400 for missing required fields[32m 9[2mms[22m[39m
+       [32m✓[39m should return 400 for invalid handle format[32m 4[2mms[22m[39m
+       [32m✓[39m should return 400 for invalid email format[32m 3[2mms[22m[39m
+       [32m✓[39m should return user by id with 200 status[32m 3[2mms[22m[39m
+       [32m✓[39m should return 404 when user not found[32m 2[2mms[22m[39m
+       [32m✓[39m should return 500 on database error[32m 3[2mms[22m[39m
+       [32m✓[39m should update user and return 200[32m 8[2mms[22m[39m
+       [32m✓[39m should return 400 for invalid email during update[32m 3[2mms[22m[39m
+       [32m✓[39m should delete user and return 200 with success[32m 3[2mms[22m[39m
+       [32m✓[39m should return 400 on database error during delete[32m 3[2mms[22m[39m
+ [31m❯[39m src/routes/posts.d1.test.ts [2m([22m[2m13 tests[22m[2m | [22m[31m3 failed[39m[2m)[22m[32m 157[2mms[22m[39m
+       [32m✓[39m should handle GET / - list posts[32m 46[2mms[22m[39m
+[31m       [31m×[31m should handle POST / - create post with valid data[39m[32m 24[2mms[22m[39m
+       [32m✓[39m should handle GET /:id - retrieve specific post[32m 8[2mms[22m[39m
+       [32m✓[39m should handle PUT /:id - update post[32m 6[2mms[22m[39m
+[31m       [31m×[31m should handle DELETE /:id - delete post[39m[32m 11[2mms[22m[39m
+       [32m✓[39m should handle GET /:id/likes - get post likes[32m 11[2mms[22m[39m
+[31m       [31m×[31m should support parent/child post relationships[39m[32m 9[2mms[22m[39m
+       [32m✓[39m should return 400 for invalid post data[32m 4[2mms[22m[39m
+       [32m✓[39m should return 404 for non-existent post ID[32m 10[2mms[22m[39m
+       [32m✓[39m should handle malformed JSON gracefully[32m 5[2mms[22m[39m
+       [32m✓[39m should maintain ACID properties across operations[32m 2[2mms[22m[39m
+       [32m✓[39m should handle list query with pagination[32m 4[2mms[22m[39m
+       [32m✓[39m should return consistent response times for repeated queries[32m 10[2mms[22m[39m
+ [32m✓[39m src/routes/users.d1.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 163[2mms[22m[39m
+ [32m✓[39m src/routes/follows.d1.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 102[2mms[22m[39m
+ [32m✓[39m src/routes/health.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m src/routes/conversations.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m src/routes/members.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m src/routes/events.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m src/routes/settings.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m src/routes/follows.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m src/routes/reports.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m✓[39m src/routes/likes.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m src/routes/interactions.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m src/routes/communities.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [31m❯[39m src/routes/drafts.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 59[2mms[22m[39m
+       [32m✓[39m should return user drafts[32m 23[2mms[22m[39m
+       [32m✓[39m should create draft[32m 10[2mms[22m[39m
+       [32m✓[39m should return 400 for missing fields[32m 2[2mms[22m[39m
+[31m       [31m×[31m should update draft[39m[32m 16[2mms[22m[39m
+[31m       [31m×[31m should delete draft[39m[32m 3[2mms[22m[39m
+ [32m✓[39m src/routes/attachments.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m src/routes/reposts.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m src/routes/hashtags.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m src/routes/auth.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 2311[2mms[22m[39m
+       [33m[2m✓[22m[39m should reject an expired token [33m 1113[2mms[22m[39m
+       [33m[2m✓[22m[39m should hash and verify a password [33m 351[2mms[22m[39m
+       [33m[2m✓[22m[39m should reject an incorrect password [33m 330[2mms[22m[39m
+       [33m[2m✓[22m[39m should generate different hashes for the same password [33m 381[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 9 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/routes/drafts.test.ts[2m > [22mDrafts Router[2m > [22mPUT /:id[2m > [22mshould update draft
+[31m[1mAssertionError[22m: expected 400 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 400[39m
+
+[36m [2m❯[22m src/routes/drafts.test.ts:[2m138:31[22m[39m
+    [90m136| [39m      )[33m;[39m
+    [90m137| [39m
+    [90m138| [39m      [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m139| [39m    })[33m;[39m
+    [90m140| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/routes/drafts.test.ts[2m > [22mDrafts Router[2m > [22mDELETE /:id[2m > [22mshould delete draft
+[31m[1mAssertionError[22m: expected 400 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 400[39m
+
+[36m [2m❯[22m src/routes/drafts.test.ts:[2m157:31[22m[39m
+    [90m155| [39m      )[33m;[39m
+    [90m156| [39m
+    [90m157| [39m      [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m158| [39m      [35mconst[39m data [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m() [35mas[39m any[33m;[39m
+    [90m159| [39m      [34mexpect[39m(data[33m.[39msuccess)[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/routes/notifications.test.ts[2m > [22mNotifications Router[2m > [22mPUT /:id[2m > [22mshould update notification
+[31m[1mAssertionError[22m: expected 400 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 400[39m
+
+[36m [2m❯[22m src/routes/notifications.test.ts:[2m120:31[22m[39m
+    [90m118| [39m      )[33m;[39m
+    [90m119| [39m
+    [90m120| [39m      [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m200[39m)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m121| [39m    })[33m;[39m
+    [90m122| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/routes/posts.d1.test.ts[2m > [22mPosts D1 Integration Tests[2m > [22mPosts CRUD Operations[2m > [22mshould handle POST / - create post with valid data
+[31m[1mAssertionError[22m: expected [ 201, 400, 500 ] to include 403[39m
+[36m [2m❯[22m src/routes/posts.d1.test.ts:[2m121:31[22m[39m
+    [90m119| [39m      )[33m;[39m
+    [90m120| [39m
+    [90m121| [39m      [34mexpect[39m([[34m201[39m[33m,[39m [34m400[39m[33m,[39m [34m500[39m])[33m.[39m[34mtoContain[39m(response[33m.[39mstatus)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m122| [39m    })[33m;[39m
+    [90m123| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/routes/posts.d1.test.ts[2m > [22mPosts D1 Integration Tests[2m > [22mPosts CRUD Operations[2m > [22mshould handle DELETE /:id - delete post
+[31m[1mAssertionError[22m: expected [ 200, 404, 500 ] to include 400[39m
+[36m [2m❯[22m src/routes/posts.d1.test.ts:[2m157:31[22m[39m
+    [90m155| [39m      )[33m;[39m
+    [90m156| [39m
+    [90m157| [39m      [34mexpect[39m([[34m200[39m[33m,[39m [34m404[39m[33m,[39m [34m500[39m])[33m.[39m[34mtoContain[39m(response[33m.[39mstatus)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m158| [39m    })[33m;[39m
+    [90m159| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/routes/posts.d1.test.ts[2m > [22mPosts D1 Integration Tests[2m > [22mPosts Relationships[2m > [22mshould support parent/child post relationships
+[31m[1mAssertionError[22m: expected [ 201, 400, 500 ] to include 403[39m
+[36m [2m❯[22m src/routes/posts.d1.test.ts:[2m195:31[22m[39m
+    [90m193| [39m      )[33m;[39m
+    [90m194| [39m
+    [90m195| [39m      [34mexpect[39m([[34m201[39m[33m,[39m [34m400[39m[33m,[39m [34m500[39m])[33m.[39m[34mtoContain[39m(response[33m.[39mstatus)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m196| [39m    })[33m;[39m
+    [90m197| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/routes/posts.integration.test.ts[2m > [22mPosts Router - Integration Tests (Mock D1)[2m > [22mPOST / - Create post[2m > [22mshould create a post with valid data
+[31m[1mAssertionError[22m: expected [ 400, 500 ] to include 403[39m
+[36m [2m❯[22m src/routes/posts.integration.test.ts:[2m84:26[22m[39m
+    [90m 82| [39m
+    [90m 83| [39m      [90m// Mock DB will return 400 or 500[39m
+    [90m 84| [39m      [34mexpect[39m([[34m400[39m[33m,[39m [34m500[39m])[33m.[39m[34mtoContain[39m(response[33m.[39mstatus)[33m;[39m
+    [90m   | [39m                         [31m^[39m
+    [90m 85| [39m    })[33m;[39m
+    [90m 86| [39m  })[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/routes/posts.test.ts[2m > [22mPosts Router[2m > [22mPOST /[2m > [22mshould create post with valid authorId and return 201
+[31m[1mAssertionError[22m: expected 403 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m src/routes/posts.test.ts:[2m125:31[22m[39m
+    [90m123| [39m      )[33m;[39m
+    [90m124| [39m
+    [90m125| [39m      [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m126| [39m      [35mconst[39m data [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m()[33m;[39m
+    [90m127| [39m      [34mexpect[39m(data[33m.[39mauthorId)[33m.[39m[34mtoBe[39m(newPost[33m.[39mauthorId)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/routes/users.test.ts[2m > [22mUsers Router[2m > [22mPOST /[2m > [22mshould create user with valid data and return 201
+[31m[1mAssertionError[22m: expected 401 to be 201 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 201[39m
+[31m+ 401[39m
+
+[36m [2m❯[22m src/routes/users.test.ts:[2m130:31[22m[39m
+    [90m128| [39m      )[33m;[39m
+    [90m129| [39m
+    [90m130| [39m      [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)[33m;[39m
+    [90m   | [39m                              [31m^[39m
+    [90m131| [39m      [35mconst[39m data [33m=[39m [35mawait[39m response[33m.[39m[34mjson[39m()[33m;[39m
+    [90m132| [39m      [34mexpect[39m(data)[33m.[39m[34mtoEqual[39m(newUser)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m6 failed[39m[22m[2m | [22m[1m[32m24 passed[39m[22m[90m (30)[39m
+[2m      Tests [22m [1m[31m9 failed[39m[22m[2m | [22m[1m[32m197 passed[39m[22m[90m (206)[39m
+[2m   Start at [22m 02:14:13
+[2m   Duration [22m 13.16s[2m (transform 8.17s, setup 0ms, import 71.66s, tests 4.32s, environment 82.55s)[22m
+

@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const draftsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
@@ -21,7 +22,7 @@ draftsRouter.get("/:userId", async (c) => {
   }
 });
 
-draftsRouter.post("/", async (c) => {
+draftsRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['userId', 'content']);
@@ -33,6 +34,14 @@ draftsRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to save draft as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -48,11 +57,28 @@ draftsRouter.post("/", async (c) => {
   }
 });
 
-draftsRouter.put("/:id", async (c) => {
+draftsRouter.put("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
     const body = await c.req.json();
+    const auth = c.env.auth as any;
     const db = getDb(c);
+    
+    // Check if draft exists and belongs to authenticated user
+    const existing = await db.select().from(drafts).where(eq(drafts.id, id)).get();
+    if (!existing) {
+      return c.json(
+        createErrorResponse('下書きが見つかりません', 'DRAFT_NOT_FOUND'),
+        404
+      );
+    }
+    if (existing.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const result = await db.update(drafts)
       .set({
         content: body.content,
@@ -68,10 +94,27 @@ draftsRouter.put("/:id", async (c) => {
   }
 });
 
-draftsRouter.delete("/:id", async (c) => {
+draftsRouter.delete("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
+    const auth = c.env.auth as any;
     const db = getDb(c);
+    
+    // Check if draft exists and belongs to authenticated user
+    const existing = await db.select().from(drafts).where(eq(drafts.id, id)).get();
+    if (!existing) {
+      return c.json(
+        createErrorResponse('下書きが見つかりません', 'DRAFT_NOT_FOUND'),
+        404
+      );
+    }
+    if (existing.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     await db.delete(drafts).where(eq(drafts.id, id));
     return c.json({ success: true }, 200);
   } catch (error: unknown) {

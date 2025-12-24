@@ -4,10 +4,11 @@ import { eq, and } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
+import { requireAuth } from '../middleware/auth';
 
 export const eventsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
-eventsRouter.post("/attendances", async (c) => {
+eventsRouter.post("/attendances", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['eventId', 'userId']);
@@ -19,6 +20,14 @@ eventsRouter.post("/attendances", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to register as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -34,11 +43,21 @@ eventsRouter.post("/attendances", async (c) => {
   }
 });
 
-eventsRouter.put("/attendances/:eventId/:userId", async (c) => {
+eventsRouter.put("/attendances/:eventId/:userId", requireAuth, async (c) => {
   try {
     const eventId = c.req.param('eventId');
     const userId = c.req.param('userId');
     const body = await c.req.json();
+    const auth = c.env.auth as any;
+    
+    // Only allow user to update as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     const result = await db.update(eventAttendances)
       .set({ status: body.status })
@@ -52,10 +71,20 @@ eventsRouter.put("/attendances/:eventId/:userId", async (c) => {
   }
 });
 
-eventsRouter.delete("/attendances/:eventId/:userId", async (c) => {
+eventsRouter.delete("/attendances/:eventId/:userId", requireAuth, async (c) => {
   try {
     const eventId = c.req.param('eventId');
     const userId = c.req.param('userId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to cancel as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(eventAttendances)
       .where(and(eq(eventAttendances.eventId, eventId), eq(eventAttendances.userId, userId)));

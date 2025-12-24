@@ -3,11 +3,10 @@ import { likes } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
-import { validateRequired } from '../utils/validation';
-
+import { validateRequired } from '../utils/validation';import { requireAuth } from '../middleware/auth';
 export const likesRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
-likesRouter.post("/", async (c) => {
+likesRouter.post("/", requireAuth, async (c) => {
   try {
     const body = await c.req.json();
     const validation = validateRequired(body, ['userId', 'postId']);
@@ -19,6 +18,14 @@ likesRouter.post("/", async (c) => {
           { missing: validation.missing }
         ),
         400
+      );
+    }
+    const auth = c.env.auth as any;
+    // Only allow user to like as themselves (unless admin)
+    if (body.userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
       );
     }
     const db = getDb(c);
@@ -33,10 +40,20 @@ likesRouter.post("/", async (c) => {
   }
 });
 
-likesRouter.delete("/:userId/:postId", async (c) => {
+likesRouter.delete("/:userId/:postId", requireAuth, async (c) => {
   try {
     const userId = c.req.param('userId');
     const postId = c.req.param('postId');
+    const auth = c.env.auth as any;
+    
+    // Only allow user to unlike as themselves (unless admin)
+    if (userId !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(
+        createErrorResponse('権限がありません', 'FORBIDDEN'),
+        403
+      );
+    }
+    
     const db = getDb(c);
     await db.delete(likes)
       .where(and(eq(likes.userId, userId), eq(likes.postId, postId)));
