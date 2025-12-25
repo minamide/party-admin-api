@@ -58,3 +58,15 @@ npm run test:integration  # Integration only
 npm run test:d1   # D1 tests only
 ```
 
+## 初期管理者ログイン情報
+
+開発環境では、`seed.sql` を使用して初期管理者ユーザーが設定されています。
+
+**メールアドレス:** `admin@example.com`
+**パスワード:** `AdminPass123`
+
+**注意:**
+-   このパスワードは開発目的のものであり、本番環境では使用しないでください。
+-   `seed.sql` を変更した場合は、この情報も更新してください。
+-   パスワードハッシュは `generate-password-hash.ts` スクリプトで生成されます。
+

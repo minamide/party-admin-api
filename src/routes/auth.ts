@@ -300,3 +300,109 @@ authRouter.get('/me', async (c) => {
     return c.json(createErrorResponse(message, 'FETCH_ERROR'), 500);
   }
 });
+
+/**
+ * POST /auth/change-password
+ * ユーザーのパスワード変更
+ */
+authRouter.post('/change-password', async (c) => {
+  try {
+    const auth = c.env.auth as any;
+
+    if (!auth?.user) {
+      return c.json(
+        createErrorResponse('Unauthorized', 'UNAUTHORIZED'),
+        401
+      );
+    }
+
+    const body = await c.req.json();
+
+    // バリデーション
+    const validation = validateRequired(body, ['oldPassword', 'newPassword']);
+    if (!validation.valid) {
+      return c.json(
+        createErrorResponse(
+          `Missing required fields: ${validation.missing?.join(', ')}`,
+          'VALIDATION_ERROR',
+          { missing: validation.missing }
+        ),
+        400
+      );
+    }
+
+    // パスワード強度のチェック
+    const passwordStrength = checkPasswordStrength(body.newPassword);
+    if (passwordStrength === 'weak') {
+      return c.json(
+        createErrorResponse(
+          'New password must be at least 8 characters with uppercase, lowercase, and numbers',
+          'WEAK_PASSWORD',
+          { strength: passwordStrength }
+        ),
+        400
+      );
+    }
+
+    const db = getDb(c);
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, auth.user.userId))
+      .then((rows) => rows[0]);
+
+    if (!user) {
+      return c.json(
+        createErrorResponse('User not found', 'NOT_FOUND'),
+        404
+      );
+    }
+
+    // 現在のパスワードを確認
+    if (!user.passwordHash || !user.passwordSalt) {
+      return c.json(
+        createErrorResponse('Password not set for this account', 'PASSWORD_NOT_SET'),
+        400
+      );
+    }
+
+    const passwordMatch = await verifyPassword(
+      body.oldPassword,
+      user.passwordHash,
+      user.passwordSalt
+    );
+
+    if (!passwordMatch) {
+      return c.json(
+        createErrorResponse('Invalid old password', 'INVALID_OLD_PASSWORD'),
+        401
+      );
+    }
+
+    // 新しいパスワードをハッシュ化
+    const { hash, salt } = await hashPassword(body.newPassword);
+
+    // パスワードを更新
+    await db
+      .update(users)
+      .set({
+        passwordHash: hash,
+        passwordSalt: salt,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(users.id, auth.user.userId));
+
+    return c.json(
+      {
+        success: true,
+        message: 'Password updated successfully',
+      },
+      200
+    );
+  } catch (error: unknown) {
+    console.error('Change password error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to change password';
+    const stack = error instanceof Error ? error.stack : undefined;
+    return c.json(createErrorResponse(message, 'CHANGE_PASSWORD_ERROR', { stack }), 500);
+  }
+});

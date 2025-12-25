@@ -1,0 +1,1 @@
+INSERT INTO users (id, name, email, handle, password_hash, password_salt, role, created_at, updated_at) VALUES ('c614b0e5-7b5f-4a0b-9c7e-2d9d1b0a8f7c', 'Admin User', 'admin@example.com', 'admin', 'tEzAquMxobVDygUOXZhAbGnbHKiHYOwuZQfW82Vv6Cs=', 'GhUgWxmovhrSutqNrWpYew==', 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
