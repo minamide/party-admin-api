@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { posts, likes, users } from '../db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, isNull } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
@@ -94,12 +94,12 @@ async function getPostsWithParents(db: any, postList: any[]) {
 
 export const postsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
-// GET /posts - リスト取得（認証不要）
+// GET /posts - リスト取得（認証不要、返信は除外）
 postsRouter.get("/", async (c) => {
   try {
     const db = getDb(c);
     
-    // postsとusersをJOINして取得
+    // postsとusersをJOINして取得（返信ポストは除外）
     const result = await db
       .select({
         post: posts,
@@ -117,6 +117,7 @@ postsRouter.get("/", async (c) => {
       })
       .from(posts)
       .leftJoin(users, eq(posts.authorId, users.id))
+      .where(isNull(posts.parentId))
       .orderBy(desc(posts.createdAt))
       .all();
     
@@ -162,6 +163,20 @@ postsRouter.post("/", requireAuth, async (c) => {
     }
 
     const db = getDb(c);
+    
+    // parentId が指定されている場合、rootId を計算
+    let parentId = body.parentId || null;
+    let rootId = body.rootId || null;
+    
+    if (parentId) {
+      // 親ポストを取得
+      const parentPost = await db.select().from(posts).where(eq(posts.id, parentId)).get();
+      if (parentPost) {
+        // 親のrootIdがあればそれを使用、なければ親自身がroot
+        rootId = parentPost.rootId || parentPost.id;
+      }
+    }
+    
     const result = await db.insert(posts).values({
       id: crypto.randomUUID(),
       authorId: body.authorId,
@@ -171,6 +186,8 @@ postsRouter.post("/", requireAuth, async (c) => {
       hashtags: body.hashtags ? JSON.stringify(body.hashtags) : null,
       type: body.type || 'text',
       visibility: body.visibility || 'public',
+      parentId,
+      rootId,
     }).returning().get();
     
     return c.json(result, 201);
@@ -270,6 +287,47 @@ postsRouter.delete("/:id", requireAuth, async (c) => {
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     return c.json(createErrorResponse(message, 'POST_DELETE_ERROR'), 400);
+  }
+});
+
+// GET /posts/:id/replies - 返信一覧取得（認証不要）
+postsRouter.get("/:id/replies", async (c) => {
+  try {
+    const parentId = c.req.param('id');
+    const db = getDb(c);
+    
+    // postsとusersをJOINして返信を取得
+    const result = await db
+      .select({
+        post: posts,
+        author: {
+          id: users.id,
+          name: users.name,
+          handle: users.handle,
+          email: users.email,
+          photoUrl: users.photoUrl,
+          bannerUrl: users.bannerUrl,
+          bio: users.bio,
+          location: users.location,
+          website: users.website,
+        }
+      })
+      .from(posts)
+      .leftJoin(users, eq(posts.authorId, users.id))
+      .where(eq(posts.parentId, parentId))
+      .orderBy(desc(posts.createdAt))
+      .all();
+    
+    // 結果を整形
+    const repliesWithAuthors = result.map(row => ({
+      ...row.post,
+      author: row.author
+    }));
+    
+    return c.json(repliesWithAuthors, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'REPLIES_GET_ERROR'), 500);
   }
 });
 
