@@ -6,6 +6,53 @@ import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
 import { requireAuth } from '../middleware/auth';
 
+// Helper: ポストの祖先をすべて取得（効率的に）
+async function getAncestorChain(db: any, postId: string) {
+  const ancestors: any[] = [];
+  let currentId: string | null = postId;
+  const visited = new Set<string>();
+
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    
+    const result = await db
+      .select({
+        post: posts,
+        author: {
+          id: users.id,
+          name: users.name,
+          handle: users.handle,
+          email: users.email,
+          photoUrl: users.photoUrl,
+          bannerUrl: users.bannerUrl,
+          bio: users.bio,
+          location: users.location,
+          website: users.website,
+        }
+      })
+      .from(posts)
+      .leftJoin(users, eq(posts.authorId, users.id))
+      .where(eq(posts.id, currentId))
+      .get();
+
+    if (!result) break;
+
+    const post = {
+      ...result.post,
+      author: result.author
+    };
+
+    if (post.parentId) {
+      ancestors.unshift(post); // 最初に追加（ルート→親の順）
+      currentId = post.parentId;
+    } else {
+      break;
+    }
+  }
+
+  return ancestors;
+}
+
 // Helper: ポストを親情報と一緒に取得
 async function getPostWithParent(db: any, postId: string) {
   // postsとusersをJOINして取得
@@ -214,6 +261,21 @@ postsRouter.get("/:id", async (c) => {
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     return c.json(createErrorResponse(message, 'POST_GET_ERROR'), 500);
+  }
+});
+
+// GET /posts/:id/ancestors - 祖先ツイート取得（認証不要、効率的）
+postsRouter.get("/:id/ancestors", async (c) => {
+  try {
+    const id = c.req.param('id');
+    const db = getDb(c);
+    
+    // 祖先をすべて取得
+    const ancestors = await getAncestorChain(db, id);
+    return c.json(ancestors, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'ANCESTORS_GET_ERROR'), 500);
   }
 });
 
