@@ -8,9 +8,33 @@ import { requireAuth } from '../middleware/auth';
 
 // Helper: ポストを親情報と一緒に取得
 async function getPostWithParent(db: any, postId: string) {
-  const post = await db.select().from(posts).where(eq(posts.id, postId)).get();
+  // postsとusersをJOINして取得
+  const result = await db
+    .select({
+      post: posts,
+      author: {
+        id: users.id,
+        name: users.name,
+        handle: users.handle,
+        email: users.email,
+        photoUrl: users.photoUrl,
+        bannerUrl: users.bannerUrl,
+        bio: users.bio,
+        location: users.location,
+        website: users.website,
+      }
+    })
+    .from(posts)
+    .leftJoin(users, eq(posts.authorId, users.id))
+    .where(eq(posts.id, postId))
+    .get();
   
-  if (!post) return null;
+  if (!result) return null;
+
+  const post = {
+    ...result.post,
+    author: result.author
+  };
 
   // 親ポストがある場合は取得
   let parent = null;
@@ -74,8 +98,35 @@ export const postsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 postsRouter.get("/", async (c) => {
   try {
     const db = getDb(c);
-    const result = await db.select().from(posts).orderBy(desc(posts.createdAt)).all();
-    const postsWithParents = await getPostsWithParents(db, result);
+    
+    // postsとusersをJOINして取得
+    const result = await db
+      .select({
+        post: posts,
+        author: {
+          id: users.id,
+          name: users.name,
+          handle: users.handle,
+          email: users.email,
+          photoUrl: users.photoUrl,
+          bannerUrl: users.bannerUrl,
+          bio: users.bio,
+          location: users.location,
+          website: users.website,
+        }
+      })
+      .from(posts)
+      .leftJoin(users, eq(posts.authorId, users.id))
+      .orderBy(desc(posts.createdAt))
+      .all();
+    
+    // 結果を整形
+    const postsWithAuthors = result.map(row => ({
+      ...row.post,
+      author: row.author
+    }));
+    
+    const postsWithParents = await getPostsWithParents(db, postsWithAuthors);
     return c.json(postsWithParents, 200);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
