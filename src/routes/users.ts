@@ -105,6 +105,7 @@ usersRouter.get("/:id", requireAuth, async (c) => {
 });
 
 // PUT /users/:id - ユーザー更新（認証必須）
+// PUT /users/:id - ユーザー更新（認証必須）
 usersRouter.put("/:id", requireAuth, async (c) => {
   try {
     const auth = c.env.auth as any;
@@ -112,14 +113,27 @@ usersRouter.put("/:id", requireAuth, async (c) => {
     const body = await c.req.json();
     const db = getDb(c);
 
+    console.log('Profile update request:', {
+      userId: id,
+      authUserId: auth?.user?.userId,
+      authUserRole: auth?.user?.role,
+      body: { ...body, photoUrl: body.photoUrl ? '***' : undefined, bannerUrl: body.bannerUrl ? '***' : undefined }
+    });
+
     // 自分のプロフィール、または管理者のみ編集可能
-    if (auth.user.userId !== id && auth.user.role !== 'admin') {
+    if (auth?.user?.userId !== id && auth?.user?.role !== 'admin') {
+      console.log('Access denied:', {
+        requestUserId: auth?.user?.userId,
+        targetId: id,
+        role: auth?.user?.role
+      });
       return c.json(
         createErrorResponse('Forbidden: cannot edit other users', 'FORBIDDEN'),
         403
       );
     }
 
+    // メールアドレスのバリデーション
     if (body.email && !isValidEmail(body.email)) {
       return c.json(
         createErrorResponse('Invalid email format', 'INVALID_EMAIL'),
@@ -127,22 +141,80 @@ usersRouter.put("/:id", requireAuth, async (c) => {
       );
     }
 
+    // ハンドルのバリデーション（変更の場合のみ）
+    if (body.handle && !isValidHandle(body.handle)) {
+      return c.json(
+        createErrorResponse(
+          'Handle must be 3-30 characters, alphanumeric and underscore only',
+          'INVALID_HANDLE'
+        ),
+        400
+      );
+    }
+
+    // 更新対象のフィールドのみ設定
+    const updateData: Record<string, any> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    const allowedFields = ['name', 'email', 'handle', 'bio', 'location', 'website', 'photoUrl', 'bannerUrl'];
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field] || null;
+      }
+    }
+
+    console.log('Updating user with data:', { id, updateData: { ...updateData, photoUrl: updateData.photoUrl ? '***' : undefined, bannerUrl: updateData.bannerUrl ? '***' : undefined } });
+
+    // Update 前の状態を確認
+    const userBefore = await db.select().from(users).where(eq(users.id, id)).get();
+    console.log('User state before update:', { 
+      id, 
+      nameBefore: userBefore?.name,
+      bioBefore: userBefore?.bio,
+      exists: !!userBefore
+    });
+
     const result = await db.update(users)
-      .set({
-        name: body.name,
-        email: body.email,
-        bio: body.bio,
-        photoUrl: body.photoUrl,
-        bannerUrl: body.bannerUrl,
-        updatedAt: new Date().toISOString(),
-      })
+      .set(updateData)
       .where(eq(users.id, id))
       .returning()
       .get();
+
+    console.log('Update result:', { 
+      id,
+      success: !!result,
+      name: result?.name,
+      bio: result?.bio,
+      location: result?.location,
+      website: result?.website,
+      updatedAt: result?.updatedAt
+    });
+
+    // Update 後の状態を確認
+    const userAfter = await db.select().from(users).where(eq(users.id, id)).get();
+    console.log('User state after update:', { 
+      id, 
+      nameAfter: userAfter?.name,
+      bioAfter: userAfter?.bio,
+      exists: !!userAfter
+    });
+
+    if (!result) {
+      return c.json(
+        createErrorResponse('ユーザーが見つかりません', 'USER_NOT_FOUND'),
+        404
+      );
+    }
     
-    return c.json(result, 200);
+    return c.json({
+      success: true,
+      data: result,
+      message: 'User profile updated successfully'
+    }, 200);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
+    console.error('Profile update error:', { error: message, stack: error instanceof Error ? error.stack : undefined });
     return c.json(createErrorResponse(message, 'USER_UPDATE_ERROR'), 400);
   }
 });
