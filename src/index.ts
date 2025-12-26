@@ -23,33 +23,35 @@ import { healthRouter } from './routes/health';
 import { authMiddleware } from './middleware/auth';
 import { OAuthProviderManager } from './auth/providers/manager';
 import { GoogleOAuthProvider } from './auth/providers/google';
+import { cors } from 'hono/cors';
 
 const app = new Hono<{ Bindings: CloudflareBindings }>();
 
-// Global OAuth manager instance (initialized on first request)
-let globalOAuthManager: OAuthProviderManager | null = null;
+// Global OAuth manager instance
+const globalOAuthManager = new OAuthProviderManager();
 
-// ==================== OAUTH INITIALIZATION ====================
-// Initialize OAuth providers on first request
-app.use('*', async (c, next) => {
-  // Initialize OAuth manager only once
-  if (!globalOAuthManager) {
-    globalOAuthManager = new OAuthProviderManager();
-    
-    // Add Google provider if configured
-    if (c.env.GOOGLE_CLIENT_ID && c.env.GOOGLE_CLIENT_SECRET) {
-      const googleProvider = new GoogleOAuthProvider({
-        clientId: c.env.GOOGLE_CLIENT_ID,
-        clientSecret: c.env.GOOGLE_CLIENT_SECRET,
-        redirectUri: c.env.GOOGLE_REDIRECT_URI || `${new URL(c.req.url).origin}/oauth/callback/google`,
-      });
-      console.log('Google provider created with:', {
-        clientId: c.env.GOOGLE_CLIENT_ID,
-        redirectUri: c.env.GOOGLE_REDIRECT_URI,
-      });
-      globalOAuthManager.registerProvider('google', googleProvider);
-      console.log('Provider registered, available:', globalOAuthManager.isProviderAvailable('google'));
-    }
+// ==================== GLOBAL MIDDLEWARE ====================
+// 0. CORS (allow browser requests from frontend)
+app.use('*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// 1. JWT Authentication Middleware (applies to all routes, setting c.env.auth)
+app.use('*', authMiddleware);
+
+// 2. OAuth provider registration (for /oauth/* routes only)
+app.use('/oauth/*', async (c, next) => {
+  // Register Google provider if not already registered
+  if (!globalOAuthManager.isProviderAvailable('google') && c.env.GOOGLE_CLIENT_ID && c.env.GOOGLE_CLIENT_SECRET) {
+    const googleProvider = new GoogleOAuthProvider({
+      clientId: c.env.GOOGLE_CLIENT_ID,
+      clientSecret: c.env.GOOGLE_CLIENT_SECRET,
+      redirectUri: c.env.GOOGLE_REDIRECT_URI || `${new URL(c.req.url).origin}/oauth/callback/google`,
+    });
+    globalOAuthManager.registerProvider('google', googleProvider);
+    console.log('OAuth: Google provider registered for', c.env.GOOGLE_CLIENT_ID);
   }
   
   // Store manager in context for use in routes
@@ -58,9 +60,7 @@ app.use('*', async (c, next) => {
   await next();
 });
 
-// ==================== AUTHENTICATION MIDDLEWARE ====================
-// Apply JWT authentication to all routes
-app.use('*', authMiddleware);
+
 
 // ==================== FILE-BASED ROUTING ====================
 // Routes are automatically registered based on imported route modules

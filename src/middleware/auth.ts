@@ -5,10 +5,12 @@
 
 import { Context, Next } from 'hono';
 import { verifyJWT, JWTPayload } from '../utils/jwt';
+import { createErrorResponse } from '../utils/errors'; // ここを追加
 
 declare global {
   interface CloudflareBindings {
     JWT_SECRET: string;
+    auth?: AuthContext; // ここを追加
   }
 }
 
@@ -29,10 +31,12 @@ export interface AuthContext {
  */
 export async function authMiddleware(c: Context, next: Next): Promise<void> {
   const authHeader = c.req.header('Authorization');
+  console.log('authMiddleware: Processing request.');
 
   // Authorization ヘッダーがない場合
   if (!authHeader) {
     c.env.auth = { error: 'Missing Authorization header' } as AuthContext;
+    console.log('authMiddleware: Missing Authorization header.');
     await next();
     return;
   }
@@ -40,15 +44,18 @@ export async function authMiddleware(c: Context, next: Next): Promise<void> {
   // Bearer スキーム以外のサポート
   if (!authHeader.startsWith('Bearer ')) {
     c.env.auth = { error: 'Invalid Authorization header format' } as AuthContext;
+    console.log('authMiddleware: Invalid Authorization header format.');
     await next();
     return;
   }
 
   const token = authHeader.substring(7);
+  console.log('authMiddleware: Token extracted.', token.substring(0, 10) + '...');
 
   try {
     // JWT を検証
     const payload = await verifyJWT(token, c.env.JWT_SECRET);
+    console.log('authMiddleware: JWT verified. Payload userId:', payload.userId);
 
     // ユーザー情報をコンテキストに追加
     c.env.auth = {
@@ -58,11 +65,14 @@ export async function authMiddleware(c: Context, next: Next): Promise<void> {
         role: payload.role,
       },
     } as AuthContext;
+    console.log('authMiddleware: User context set.', c.env.auth.user);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'JWT verification failed';
     c.env.auth = { error: message } as AuthContext;
+    console.error('authMiddleware: JWT verification failed.', message);
   }
 
+  // ここで await next(); を呼び出す前に認証情報を設定
   await next();
 }
 
@@ -73,92 +83,116 @@ export async function authMiddleware(c: Context, next: Next): Promise<void> {
  * @param next - Next middleware
  */
 export async function requireAuth(c: Context, next: Next): Promise<void> {
-  // テスト環境用: c.env が存在しない場合は作成
-  if (!c.env) {
-    c.env = {};
-  }
+  console.log('requireAuth: Entering requireAuth middleware.');
+  // authMiddleware によって認証情報が c.env.auth に設定されていることを期待
+  const authContext = c.env.auth as AuthContext;
+  console.log('requireAuth: Current authContext:', JSON.stringify(authContext, null, 2));
 
-  // テスト環境用: auth が設定されていない場合はデフォルト値を使用
-  if (!c.env.auth) {
-    // 本番環境では authMiddleware から認証情報が来ている想定
-    // テスト環境では本来ならエラーだが、テストのために自動設定
-    const authHeader = c.req.header('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.substring(7);
-      try {
-        const payload = await verifyJWT(token, c.env.JWT_SECRET || 'test-secret');
-        c.env.auth = {
-          user: {
-            userId: payload.userId,
-            email: payload.email,
-            role: payload.role,
-          },
-        } as AuthContext;
-      } catch (error: unknown) {
-        // テスト環境では JWT 検証エラーでもデフォルトユーザーを使用
-        if (process.env.NODE_ENV === 'test') {
-          c.env.auth = {
-            user: {
-              userId: 'test-user-id',
-              email: 'test@example.com',
-              role: 'admin',
-            },
-          } as AuthContext;
-        } else {
-          return c.json({ error: 'Unauthorized' }, 401);
-        }
-      }
-    } else if (process.env.NODE_ENV === 'test') {
-      // テスト環境では自動的にテストユーザーを設定
-      c.env.auth = {
-        user: {
-          userId: 'test-user-id',
-          email: 'test@example.com',
-          role: 'admin',
-        },
-      } as AuthContext;
-    } else {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-  }
-
-  const auth = c.env.auth as AuthContext | undefined;
-
-  if (!auth?.user) {
+  // ユーザー情報がない、またはエラーがある場合は認証失敗
+  if (!authContext?.user) {
+    console.warn('requireAuth: User not authenticated.', authContext?.error);
     return c.json(
-      { error: auth?.error || 'Unauthorized' },
+      createErrorResponse(authContext?.error || 'Unauthorized', 'UNAUTHORIZED'),
       401
     );
   }
 
+  console.log('requireAuth: User authenticated.', authContext.user.userId);
   await next();
 }
 
 /**
- * ロールベースのアクセス制御
- * 特定のロールを持つユーザーのみアクセスを許可
- * @param allowedRoles - 許可するロールのリスト
+ * メール認証済みユーザーのみアクセス可能にするミドルウェア
+ * isVerified = 1 のユーザーのみ許可
  */
-export function requireRole(...allowedRoles: string[]) {
-  return async (c: Context, next: Next): Promise<void> => {
-    const auth = c.env.auth as AuthContext | undefined;
+export async function requireVerifiedEmail(c: Context, next: Next): Promise<void> {
+  console.log('requireVerifiedEmail: Checking email verification status.');
+  
+  // 先にrequireAuthが実行されていることを前提
+  const authContext = c.env.auth as AuthContext;
+  
+  if (!authContext?.user) {
+    console.warn('requireVerifiedEmail: User not authenticated.');
+    return c.json(
+      createErrorResponse('Unauthorized', 'UNAUTHORIZED'),
+      401
+    );
+  }
 
-    if (!auth?.user) {
-      return c.json({ error: 'Unauthorized' }, 401);
+  // データベースからユーザーの認証状態を確認
+  try {
+    const { getDb } = await import('../utils/db');
+    const { users } = await import('../db/schema');
+    const { eq } = await import('drizzle-orm');
+    
+    const db = getDb(c);
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, authContext.user.userId))
+      .then(rows => rows[0]);
+
+    if (!user) {
+      console.warn('requireVerifiedEmail: User not found in database.');
+      return c.json(
+        createErrorResponse('User not found', 'USER_NOT_FOUND'),
+        404
+      );
     }
 
-    if (!allowedRoles.includes(auth.user.role)) {
-      return c.json({ error: 'Forbidden: insufficient permissions' }, 403);
+    if (!user.isVerified) {
+      console.warn('requireVerifiedEmail: Email not verified for user:', user.id);
+      return c.json(
+        createErrorResponse(
+          'Email verification required. Please verify your email address to access this resource.',
+          'EMAIL_NOT_VERIFIED',
+          { 
+            userId: user.id,
+            email: user.email,
+            isVerified: false 
+          }
+        ),
+        403
+      );
+    }
+
+    console.log('requireVerifiedEmail: Email verified for user:', user.id);
+    await next();
+  } catch (error) {
+    console.error('requireVerifiedEmail: Database error:', error);
+    return c.json(
+      createErrorResponse('Internal server error', 'SERVER_ERROR'),
+      500
+    );
+  }
+}
+
+/**
+ * 特定の役割が必要なミドルウェアを生成
+ * @param requiredRole 必要な役割
+ */
+export function requireRole(requiredRole: string) {
+  return async function(c: Context, next: Next): Promise<void> {
+    const authContext = c.env.auth as AuthContext;
+    
+    if (!authContext?.user) {
+      return c.json(
+        createErrorResponse('Unauthorized', 'UNAUTHORIZED'),
+        401
+      );
+    }
+
+    if (authContext.user.role !== requiredRole) {
+      return c.json(
+        createErrorResponse(
+          `Forbidden: ${requiredRole} role required`,
+          'FORBIDDEN',
+          { userRole: authContext.user.role, requiredRole }
+        ),
+        403
+      );
     }
 
     await next();
   };
 }
-
-/**
- * グローバルに使用するための統合認証ミドルウェア
- * すべてのリクエストに適用し、認証情報を設定
- */
-export const setupAuthMiddleware = (app: any) => {
-  app.use('*', authMiddleware);
-};

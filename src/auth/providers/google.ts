@@ -27,20 +27,26 @@ export class GoogleOAuthProvider extends BaseOAuthProvider {
     return `${this.AUTHORIZATION_URL}?${params.toString()}`;
   }
 
-  async getAccessToken(code: string): Promise<OAuthTokenResponse> {
+  async getAccessToken(code: string, redirectUri?: string): Promise<OAuthTokenResponse> {
+    const params = {
+      code: code,
+      client_id: this.config.clientId,
+      client_secret: this.config.clientSecret,
+      redirect_uri: redirectUri || this.config.redirectUri,
+      grant_type: 'authorization_code',
+    };
+    
+    console.log('Google OAuth token exchange params:', params);
+    
     const response = await fetch(this.TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code: code,
-        client_id: this.config.clientId,
-        client_secret: this.config.clientSecret,
-        redirect_uri: this.config.redirectUri,
-        grant_type: 'authorization_code',
-      }).toString(),
+      body: new URLSearchParams(params).toString(),
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Google OAuth token response error:', { status: response.status, body: errorText });
       throw new Error(`Google OAuth token request failed: ${response.statusText}`);
     }
 

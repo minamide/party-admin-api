@@ -43,7 +43,7 @@ export abstract class BaseOAuthProvider {
   /**
    * アクセストークンを取得
    */
-  abstract getAccessToken(code: string): Promise<OAuthTokenResponse>;
+  abstract getAccessToken(code: string, redirectUri?: string): Promise<OAuthTokenResponse>;
 
   /**
    * ユーザープロフィールを取得

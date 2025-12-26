@@ -26,6 +26,23 @@ export const users = sqliteTable('users', {
   settings: text('settings'), // JSON
 });
 
+export const verificationTokens = sqliteTable('verification_tokens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  type: text('type').notNull(), // 'email_verification', 'password_reset', etc.
+  expiresAt: text('expires_at').notNull(),
+  usedAt: text('used_at'),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const oauthStates = sqliteTable('oauth_states', {
+  state: text('state').primaryKey(),
+  provider: text('provider').notNull(),
+  redirectUri: text('redirect_uri'),
+  expiresAt: text('expires_at').notNull(),
+});
+
 export const posts = sqliteTable('posts', {
   id: text('id').primaryKey(),
   authorId: text('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -294,10 +311,6 @@ export const socialAccounts = sqliteTable('social_accounts', {
  * OAuth State テーブル
  * CSRF 攻撃対策用の state 検証
  */
-export const oauthStates = sqliteTable('oauth_states', {
-  state: text('state').primaryKey(),
-  provider: text('provider').notNull(),
-  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text('expires_at').notNull(),
-});
+// Already defined above - removed duplicate
+
 

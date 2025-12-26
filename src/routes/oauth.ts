@@ -26,10 +26,12 @@ export const oauthRouter = new Hono<{ Bindings: CloudflareBindings }>();
 /**
  * GET /oauth/authorize/:provider
  * OAuth 認可リクエストをリダイレクト
+ * redirect_uri パラメータはオプション（デフォルトは /oauth/callback/:provider）
  */
 oauthRouter.get('/authorize/:provider', async (c: Context) => {
   try {
     const provider = c.req.param('provider') as ProviderType;
+    const redirectUri = c.req.query('redirect_uri'); // フロントエンドのコールバック URL
     
     // Get OAuth manager from context
     const oauthManager = c.get('oauthManager') as OAuthProviderManager;
@@ -49,8 +51,8 @@ oauthRouter.get('/authorize/:provider', async (c: Context) => {
       );
     }
 
-    // State を生成
-    const state = await generateOAuthState(c, provider, 600); // 10 分有効
+    // State を生成（redirect_uri も含める）
+    const state = await generateOAuthState(c, provider, 600, redirectUri); // 10 分有効
 
     // OAuth プロバイダーを取得
     const oauthProvider = oauthManager.getProvider(provider);
@@ -77,28 +79,31 @@ oauthRouter.get('/authorize/:provider', async (c: Context) => {
 });
 
 /**
- * GET /oauth/callback/:provider
- * OAuth コールバック処理
+ * POST /oauth/exchange
+ * OAuth コード交換処理（フロントエンド用）
+ * code と state をリクエストボディで受け取り、JWT トークンを返す
  */
-oauthRouter.get('/callback/:provider', async (c: Context) => {
+oauthRouter.post('/exchange', async (c: Context) => {
   try {
-    const provider = c.req.param('provider') as ProviderType;
-    
+    const body = await c.req.json();
+    const { provider, code, state, redirectUri } = body;
+
+    if (!provider || !code || !state) {
+      return c.json(
+        createErrorResponse('Missing required parameters: provider, code, state', 'INVALID_PARAMS'),
+        400
+      );
+    }
+
     // Get OAuth manager from context
     const oauthManager = c.get('oauthManager') as OAuthProviderManager;
-    
+
     if (!oauthManager) {
       return c.json(
         createErrorResponse('OAuth manager not initialized', 'OAUTH_NOT_INITIALIZED'),
         500
       );
     }
-    
-    // デバッグ: 受信したクエリパラメータをログ出力
-    const code = c.req.query('code');
-    const state = c.req.query('state');
-    const error = c.req.query('error');
-    console.log('OAuth callback received:', { provider, code: code ? 'present' : 'missing', state: state ? 'present' : 'missing', error });
 
     // プロバイダーの確認
     if (!oauthManager.isProviderAvailable(provider)) {
@@ -108,15 +113,20 @@ oauthRouter.get('/callback/:provider', async (c: Context) => {
       );
     }
 
+    console.log('OAuth exchange requested:', { provider, code: code ? 'present' : 'missing', state: state ? 'present' : 'missing', redirectUri });
+
     // OAuth コールバック処理
-    const result = await handleOAuthCallback(c, provider, {
+    const result = await handleOAuthCallback(c, provider as ProviderType, {
       manager: oauthManager,
       sessionTimeout: 600,
+      code,
+      state,
+      redirectUri,
     });
 
     if (!result.success) {
       return c.json(
-        createErrorResponse(result.error || 'OAuth callback failed', 'OAUTH_CALLBACK_ERROR'),
+        createErrorResponse(result.error || 'OAuth exchange failed', 'OAUTH_EXCHANGE_ERROR'),
         400
       );
     }
@@ -148,7 +158,7 @@ oauthRouter.get('/callback/:provider', async (c: Context) => {
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     return c.json(
-      createErrorResponse(message, 'OAUTH_CALLBACK_ERROR'),
+      createErrorResponse(message, 'OAUTH_EXCHANGE_ERROR'),
       500
     );
   }
