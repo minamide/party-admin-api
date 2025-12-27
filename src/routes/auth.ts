@@ -140,6 +140,11 @@ authRouter.post('/sign-up', async (c) => {
     const baseUrl = c.env.BASE_URL || new URL(c.req.url).origin;
     const verificationUrl = generateVerificationUrl(baseUrl, verificationToken);
 
+    console.log('\n🔐 Verification Token Created:');
+    console.log('  Token:', verificationToken);
+    console.log('  Full URL:', verificationUrl);
+    console.log('  Expires in: 24 hours\n');
+
     // 認証メールを送信
     const emailResult = await sendEmail(
       {
@@ -274,6 +279,7 @@ authRouter.post('/sign-in', async (c) => {
             handle: user.handle,
             name: user.name,
             role: user.role || 'user',
+            isAdmin: user.role === 'admin',
           },
           token,
         },
@@ -330,10 +336,16 @@ authRouter.get('/me', async (c) => {
       );
     }
 
+    // role が 'admin' の場合に isAdmin フラグを追加
+    const userData = {
+      ...user,
+      isAdmin: user.role === 'admin',
+    };
+
     return c.json(
       {
         success: true,
-        data: user,
+        data: userData,
       },
       200
     );

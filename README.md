@@ -61,6 +61,23 @@ npm run test:integration  # Integration only
 npm run test:d1   # D1 tests only
 ```
 
+## メール認証設定
+
+開発環境でメール認証を利用するには、以下の環境変数が `wrangler.jsonc` に設定されている必要があります:
+
+```jsonc
+"vars": {
+  "NODE_ENV": "development",
+  "BASE_URL": "http://localhost:3000",
+  "FROM_EMAIL": "noreply@party-admin.local",
+  "EMAIL_SERVICE": "development"
+}
+```
+
+開発環境では、メール送信はコンソールに出力されます。メール認証トークンを確認するには、`npm run dev` 実行中の ターミナルを確認してください。
+
+詳細は [EMAIL_AUTH_TROUBLESHOOTING.md](./docs/EMAIL_AUTH_TROUBLESHOOTING.md) を参照してください。
+
 ## 初期管理者ログイン情報
 
 開発環境では、`seed.sql` を使用して初期管理者ユーザーが設定されています。

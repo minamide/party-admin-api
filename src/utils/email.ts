@@ -31,24 +31,37 @@ export async function sendEmail(config: EmailConfig, env: CloudflareBindings): P
   try {
     // Resendを使用する場合
     if (env.EMAIL_SERVICE === 'resend' && env.RESEND_API_KEY) {
+      console.log(`📧 Sending email via Resend to ${config.to}`);
       return await sendWithResend(config, env);
     }
     
     // MailGunを使用する場合
     if (env.EMAIL_SERVICE === 'mailgun' && env.MAILGUN_API_KEY) {
+      console.log(`📧 Sending email via MailGun to ${config.to}`);
       return await sendWithMailgun(config, env);
     }
     
     // 開発環境では console.log で出力
-    if (env.NODE_ENV === 'development') {
-      console.log('📧 Email would be sent:', config);
+    if (env.NODE_ENV === 'development' || env.EMAIL_SERVICE === 'development') {
+      console.log('\n' + '='.repeat(80));
+      console.log('📧 [DEVELOPMENT MODE] Email would be sent:');
+      console.log('From:', config.from);
+      console.log('To:', config.to);
+      console.log('Subject:', config.subject);
+      console.log('---');
+      console.log('TEXT VERSION:');
+      console.log(config.text || '(no text version)');
+      console.log('---');
+      console.log('HTML VERSION:');
+      console.log(config.html);
+      console.log('='.repeat(80) + '\n');
       return { success: true, messageId: 'dev-' + Date.now() };
     }
     
-    throw new Error('No email service configured');
+    throw new Error('No email service configured. Set EMAIL_SERVICE, RESEND_API_KEY or MAILGUN_API_KEY');
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown email error';
-    console.error('Email sending failed:', message);
+    console.error('❌ Email sending failed:', message);
     return { success: false, error: message };
   }
 }
