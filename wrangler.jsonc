@@ -25,6 +25,7 @@
 	],
 	"vars": {
 		"JWT_SECRET": "your-super-secret-jwt-key-change-this-in-production",
+		"GOOGLE_CLIENT_ID": "1077374404839-f63s76vs6qo9fdpthc57q7p8b730p6eu.apps.googleusercontent.com",
 		"GOOGLE_CLIENT_SECRET": "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"
 	}
 	/**

@@ -13,10 +13,10 @@ export class GoogleOAuthProvider extends BaseOAuthProvider {
     super(config, 'google');
   }
 
-  getAuthorizationUrl(state: string, scope: string[]): string {
+  getAuthorizationUrl(state: string, scope: string[], customRedirectUri?: string): string {
     const params = new URLSearchParams({
       client_id: this.config.clientId,
-      redirect_uri: this.config.redirectUri,
+      redirect_uri: customRedirectUri || this.config.redirectUri,
       response_type: 'code',
       scope: scope.join(' '),
       state: state,

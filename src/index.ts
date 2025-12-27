@@ -48,10 +48,10 @@ app.use('/oauth/*', async (c, next) => {
     const googleProvider = new GoogleOAuthProvider({
       clientId: c.env.GOOGLE_CLIENT_ID,
       clientSecret: c.env.GOOGLE_CLIENT_SECRET,
-      redirectUri: c.env.GOOGLE_REDIRECT_URI || `${new URL(c.req.url).origin}/oauth/callback/google`,
+      redirectUri: `${new URL(c.req.url).origin}/oauth/callback/google`,
     });
     globalOAuthManager.registerProvider('google', googleProvider);
-    console.log('OAuth: Google provider registered for', c.env.GOOGLE_CLIENT_ID);
+    console.log('OAuth: Google provider registered');
   }
   
   // Store manager in context for use in routes

@@ -60,11 +60,12 @@ oauthRouter.get('/authorize/:provider', async (c: Context) => {
     // デフォルトスコープを取得
     const scope = oauthProvider.getDefaultScopes();
 
-    // 認可 URL を生成
-    const authorizationUrl = oauthProvider.getAuthorizationUrl(state, scope);
+    // 認可 URL を生成（フロントのredirect_uriを使用）
+    const authorizationUrl = oauthProvider.getAuthorizationUrl(state, scope, redirectUri);
     
     // デバッグ: 生成されたURLをログ出力
     console.log('Authorization URL:', authorizationUrl);
+    console.log('Using redirect_uri:', redirectUri);
 
     // リダイレクト
     return c.redirect(authorizationUrl);

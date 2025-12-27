@@ -6,11 +6,23 @@ import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
 import { requireAuth } from '../middleware/auth';
 
-// Helper: ポストの祖先をすべて取得（効率的に）
+// Helper: ポストの祖先をすべて取得（効率的に、選択ツイート自身は含まない）
 async function getAncestorChain(db: any, postId: string) {
   const ancestors: any[] = [];
-  let currentId: string | null = postId;
   const visited = new Set<string>();
+  
+  // 最初に選択されたツイートを取得してそのparentIdから開始
+  const initialResult = await db
+    .select({ post: posts })
+    .from(posts)
+    .where(eq(posts.id, postId))
+    .get();
+  
+  if (!initialResult || !initialResult.post.parentId) {
+    return ancestors; // 親がなければ空配列を返す
+  }
+  
+  let currentId: string | null = initialResult.post.parentId;
 
   while (currentId && !visited.has(currentId)) {
     visited.add(currentId);
@@ -42,12 +54,8 @@ async function getAncestorChain(db: any, postId: string) {
       author: result.author
     };
 
-    if (post.parentId) {
-      ancestors.unshift(post); // 最初に追加（ルート→親の順）
-      currentId = post.parentId;
-    } else {
-      break;
-    }
+    ancestors.unshift(post); // 最初に追加（ルート→親の順）
+    currentId = post.parentId;
   }
 
   return ancestors;
