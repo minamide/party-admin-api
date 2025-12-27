@@ -3,6 +3,7 @@ import { authRouter } from './routes/auth';
 import { oauthRouter } from './routes/oauth';
 import { usersRouter } from './routes/users';
 import { postsRouter } from './routes/posts';
+import { searchRouter } from './routes/search';
 import { communitiesRouter } from './routes/communities';
 import { listsRouter } from './routes/lists';
 import { conversationsRouter } from './routes/conversations';
@@ -74,6 +75,7 @@ const routes: RouteEntry[] = [
   ['oauth', oauthRouter],
   ['users', usersRouter],
   ['posts', postsRouter],
+  ['search', searchRouter],
   ['communities', communitiesRouter],
   ['lists', listsRouter],
   ['conversations', conversationsRouter],
