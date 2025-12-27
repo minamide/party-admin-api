@@ -216,13 +216,3 @@ export const tBoardReports = sqliteTable('t_board_reports', {
   status: text('status').notNull().default('open'),
   createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 });
-
-/** 候補者テーブル：各選挙における候補者の情報を保持 */
-export const tCandidates = sqliteTable('t_candidates', {
-  id: text('id').primaryKey(),
-  electionId: text('election_id').notNull().references(() => tElections.id),
-  memberId: text('member_id').notNull(),
-  endorsedPartyId: integer('endorsed_party_id').references(() => mParties.id),
-  posterNumber: integer('poster_number').notNull(),
-  electionSlogan: text('election_slogan'),
-});

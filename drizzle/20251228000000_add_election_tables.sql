@@ -54,7 +54,7 @@ CREATE TABLE "m_towns" (
 
   FOREIGN KEY (pref_code) REFERENCES m_prefectures(pref_code),
   FOREIGN KEY (city_code) REFERENCES m_cities(city_code)
-)
+);
 
 -- 選挙種別マスター
 -- 衆議院選挙、参議院選挙、知事選挙等の選挙区分を定義
@@ -273,21 +273,6 @@ CREATE TABLE "t_board_reports" (
     FOREIGN KEY (reporter_id) REFERENCES "profiles" (id)
 );
 
--- 候補者テーブル
--- 各選挙における候補者の情報を保持
--- 候補者情報、候補者番号、ポスター番号等を管理
-CREATE TABLE "t_candidates" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "election_id" TEXT NOT NULL,
-    "member_id" TEXT NOT NULL,
-    "endorsed_party_id" INTEGER,
-    "poster_number" INTEGER NOT NULL,
-    "election_slogan" TEXT,
-    FOREIGN KEY (election_id) REFERENCES "t_elections" (id),
-    FOREIGN KEY (member_id) REFERENCES "m_party_members" (id),
-    FOREIGN KEY (endorsed_party_id) REFERENCES "m_parties" (id)
-);
-
 -- Create indexes for better query performance
 CREATE INDEX idx_m_cities_pref_code ON "m_cities" (pref_code);
 CREATE INDEX idx_m_electoral_districts_pref_code ON "m_electoral_districts" (pref_code);
@@ -298,8 +283,6 @@ CREATE INDEX idx_rel_group_members_volunteer_id ON "rel_group_members" (voluntee
 CREATE INDEX idx_t_activities_election_id ON "t_activities" (election_id);
 CREATE INDEX idx_t_activities_volunteer_id ON "t_activities" (volunteer_id);
 CREATE INDEX idx_t_activities_group_id ON "t_activities" (group_id);
-CREATE INDEX idx_t_candidates_election_id ON "t_candidates" (election_id);
-CREATE INDEX idx_t_candidates_member_id ON "t_candidates" (member_id);
 CREATE INDEX idx_t_elections_city_code ON "t_elections" (city_code);
 CREATE INDEX idx_t_elections_election_type_code ON "t_elections" (election_type_code);
 CREATE INDEX idx_t_poster_boards_election_id ON "t_poster_boards" (election_id);
