@@ -7,6 +7,7 @@ import { sql } from 'drizzle-orm';
  */
 
 // ========================================
+import { users } from './schema';
 // マスターテーブル (m_* テーブル)
 // ========================================
 // 参照用の基本情報を管理するテーブル群
@@ -17,12 +18,15 @@ export const mProportionalBlocks = sqliteTable('m_proportional_blocks', {
   blockName: text('block_name').notNull(),
   numSeats: integer('num_seats'),
 });
+  // 町丁・字の粒度で位置を紐付け
+  townKeyCode: text('town_key_code').references(() => mTowns.keyCode),
 
 /** 都道府県マスター：日本全国の47都道府県情報を保持 */
 export const mPrefectures = sqliteTable('m_prefectures', {
   prefCode: text('pref_code').primaryKey(),
   prefName: text('pref_name').notNull(),
-  prefKana: text('pref_kana'),
+  // グループ所属ユーザー
+  volunteerId: text('volunteer_id').notNull().references(() => users.id),
   proportionalBlockCode: text('proportional_block_code').references(() => mProportionalBlocks.blockCode),
 });
 
@@ -31,13 +35,16 @@ export const mCities = sqliteTable('m_cities', {
   cityCode: text('city_code').primaryKey(),
   prefCode: text('pref_code').notNull().references(() => mPrefectures.prefCode),
   cityName: text('city_name').notNull(),
-  cityKana: text('city_kana'),
+  // 任意参加のため削除時はNULL許容
+  volunteerId: text('volunteer_id').references(() => users.id),
   centerLocation: text('center_location'), // WKT形式
 });
 
 /** 町丁・字マスター：市区町村以下の町丁・字情報を管理 */
 export const mTowns = sqliteTable('m_towns', {
   keyCode: text('key_code').primaryKey(), // 町丁・字等コード（最大11桁）
+  // 活動の町丁・字粒度
+  townKeyCode: text('town_key_code').references(() => mTowns.keyCode),
   prefCode: text('pref_code').notNull().references(() => mPrefectures.prefCode), // 都道府県コード（2桁）
   cityCode: text('city_code').notNull().references(() => mCities.cityCode), // 市区町村コード（5桁）
   level: integer('level').notNull(), // 表章単位
@@ -48,7 +55,8 @@ export const mTowns = sqliteTable('m_towns', {
   households: integer('households'), // 世帯総数
 });
 
-/** 選挙種別マスター：衆議院選挙、参議院選挙、知事選挙等の選挙区分を定義 */
+  // 掲示担当者
+  postedBy: text('posted_by').references(() => users.id),
 export const mElectionTypes = sqliteTable('m_election_types', {
   typeCode: text('type_code').primaryKey(),
   typeName: text('type_name').notNull(),
@@ -58,14 +66,16 @@ export const mElectionTypes = sqliteTable('m_election_types', {
 export const mElectoralDistricts = sqliteTable('m_electoral_districts', {
   id: text('id').primaryKey(),
   chamberTypeCode: text('chamber_type_code').notNull(),
-  prefCode: text('pref_code').notNull().references(() => mPrefectures.prefCode),
+  // ルート担当者
+  volunteerId: text('volunteer_id').references(() => users.id),
   districtNumber: integer('district_number').notNull(),
   name: text('name').notNull(),
 });
 
 /** 政党マスター：政党の基本情報（名称、色コード、ロゴ等）を管理 */
 export const mParties = sqliteTable('m_parties', {
-  id: integer('id').primaryKey(),
+  // 報告者
+  reporterId: text('reporter_id').references(() => users.id),
   name: text('name').notNull(),
   shortName: text('short_name'),
   colorCode: text('color_code'), // #RRGGBB形式
