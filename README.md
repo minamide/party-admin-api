@@ -24,21 +24,24 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
 
 ### Test Suite Summary
 
-**Total: 124 tests ✅ All Passing**
+**Current Status: Partial Pass**
+- Unit tests with authentication mocking: 7/13 passing
+- D1 database integration: Ready (requires mocking setup improvements)
+- Overall: Tests in progress, core functionality tested via manual API testing
 
-#### Unit Tests (86 tests)
+#### Unit Tests
 ```bash
 npm test
 ```
-19 test files covering all 19 route files
+Tests use mocked databases and authentication middleware
 
-#### Integration Tests (10 tests)
+#### Integration Tests
 ```bash
 npm run test:integration
 ```
-Mock D1 integration tests for posts and users
+D1 integration tests for posts and users
 
-#### D1 Database Tests (28 tests)
+#### D1 Database Tests
 ```bash
 npm run test:d1
 ```

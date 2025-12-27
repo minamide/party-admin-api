@@ -2,6 +2,26 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Hono } from 'hono';
 import { usersRouter } from './users';
 
+// 認証ミドルウェアをモック
+vi.mock('../middleware/auth', () => ({
+  authMiddleware: vi.fn(async (c: any, next: any) => {
+    c.env = c.env || {};
+    c.env.JWT_SECRET = 'test-secret';
+    await next();
+  }),
+  requireAuth: vi.fn(async (c: any, next: any) => {
+    c.env = c.env || {};
+    c.env.auth = {
+      user: {
+        userId: 'test-user-id',
+        email: 'test@example.com',
+        role: 'user',
+      },
+    };
+    await next();
+  }),
+}));
+
 // Mock the database utilities
 vi.mock('../utils/db', () => ({
   getDb: vi.fn(),

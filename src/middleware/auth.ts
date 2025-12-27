@@ -84,8 +84,14 @@ export async function authMiddleware(c: Context, next: Next): Promise<void> {
  */
 export async function requireAuth(c: Context, next: Next): Promise<void> {
   console.log('requireAuth: Entering requireAuth middleware.');
+  
+  // c.env が存在することを確認し、なければオブジェクトで初期化
+  if (!c.env) {
+    c.env = {} as any;
+  }
+  
   // authMiddleware によって認証情報が c.env.auth に設定されていることを期待
-  const authContext = c.env.auth as AuthContext;
+  const authContext = c.env.auth as AuthContext | undefined;
   console.log('requireAuth: Current authContext:', JSON.stringify(authContext, null, 2));
 
   // ユーザー情報がない、またはエラーがある場合は認証失敗
