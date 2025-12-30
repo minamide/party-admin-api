@@ -96,6 +96,7 @@ const routes: RouteEntry[] = [
   ['hashtags', hashtagsRouter],
   ['settings', settingsRouter],
   ['activity_places', activityPlacesRouter],
+  ['volunteer/locations', activityPlacesRouter],
   ['r2', r2Router],
   ['debug', debugRouter],
   ['health', healthRouter],
