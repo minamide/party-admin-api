@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { activityPlaces, activityPlacePhotos, mActivityTypes, relActivityPlaceTypes } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
@@ -83,7 +83,7 @@ activityPlacesRouter.get('/:id', async (c) => {
     const photos = await db.select().from(activityPlacePhotos).where(eq(activityPlacePhotos.placeId, id)).all();
     const rels = await db.select().from(relActivityPlaceTypes).where(eq(relActivityPlaceTypes.placeId, id)).all();
     const typeCodes = rels.map(r => (r as any).type_code || (r as any).typeCode);
-    const types = typeCodes.length ? await db.select().from(mActivityTypes).where(mActivityTypes.typeCode.in(typeCodes)).all() : [];
+    const types = typeCodes.length ? await db.select().from(mActivityTypes).where(inArray(mActivityTypes.typeCode, typeCodes)).all() : [];
 
     return c.json({ place, photos, types }, 200);
   } catch (error: unknown) {
@@ -215,7 +215,7 @@ activityPlacesRouter.post('/:id/photos', requireAuth, async (c) => {
     } else {
       errDetails.value = error;
     }
-    try { console.error('PHOTO_UPLOAD_ERROR', errDetails); } catch (_) {}
+    try { console.error('PHOTO_UPLOAD_ERROR', errDetails); } catch (_) { }
     return c.json(createErrorResponse(message, 'PHOTO_UPLOAD_ERROR', errDetails), 500);
   }
 });

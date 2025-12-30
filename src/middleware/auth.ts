@@ -84,12 +84,12 @@ export async function authMiddleware(c: Context, next: Next): Promise<void> {
  */
 export async function requireAuth(c: Context, next: Next): Promise<void> {
   console.log('requireAuth: Entering requireAuth middleware.');
-  
+
   // c.env が存在することを確認し、なければオブジェクトで初期化
   if (!c.env) {
     c.env = {} as any;
   }
-  
+
   // authMiddleware によって認証情報が c.env.auth に設定されていることを期待
   const authContext = c.env.auth as AuthContext | undefined;
   console.log('requireAuth: Current authContext:', JSON.stringify(authContext, null, 2));
@@ -113,10 +113,10 @@ export async function requireAuth(c: Context, next: Next): Promise<void> {
  */
 export async function requireVerifiedEmail(c: Context, next: Next): Promise<void> {
   console.log('requireVerifiedEmail: Checking email verification status.');
-  
+
   // 先にrequireAuthが実行されていることを前提
   const authContext = c.env.auth as AuthContext;
-  
+
   if (!authContext?.user) {
     console.warn('requireVerifiedEmail: User not authenticated.');
     return c.json(
@@ -130,7 +130,7 @@ export async function requireVerifiedEmail(c: Context, next: Next): Promise<void
     const { getDb } = await import('../utils/db');
     const { users } = await import('../db/schema');
     const { eq } = await import('drizzle-orm');
-    
+
     const db = getDb(c);
     const user = await db
       .select()
@@ -152,10 +152,10 @@ export async function requireVerifiedEmail(c: Context, next: Next): Promise<void
         createErrorResponse(
           'Email verification required. Please verify your email address to access this resource.',
           'EMAIL_NOT_VERIFIED',
-          { 
+          {
             userId: user.id,
             email: user.email,
-            isVerified: false 
+            isVerified: false
           }
         ),
         403
@@ -178,9 +178,9 @@ export async function requireVerifiedEmail(c: Context, next: Next): Promise<void
  * @param requiredRole 必要な役割
  */
 export function requireRole(requiredRole: string) {
-  return async function(c: Context, next: Next): Promise<void> {
+  return async function (c: Context, next: Next): Promise<void> {
     const authContext = c.env.auth as AuthContext;
-    
+
     if (!authContext?.user) {
       return c.json(
         createErrorResponse('Unauthorized', 'UNAUTHORIZED'),
