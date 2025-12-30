@@ -5,8 +5,11 @@ import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
 import { requireAuth } from '../middleware/auth';
+import { generateJWT } from '../utils/jwt';
+import { v4 as uuidv4 } from 'uuid';
 
 export const activityPlacesRouter = new Hono<{ Bindings: CloudflareBindings }>();
+
 
 // List with optional city_code filter
 activityPlacesRouter.get('/', async (c) => {
@@ -151,5 +154,139 @@ activityPlacesRouter.delete('/:id', requireAuth, async (c) => {
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     return c.json(createErrorResponse(message, 'ACTIVITY_PLACE_DELETE_ERROR'), 400);
+  }
+});
+
+// Upload photo (server-side upload into R2 `activity-places` bucket)
+activityPlacesRouter.post('/:id/photos', requireAuth, async (c) => {
+  try {
+    const id = c.req.param('id');
+    const auth = c.env.auth as any;
+    const db = getDb(c);
+
+    const existing = await db.select().from(activityPlaces).where(eq(activityPlaces.id, id)).get();
+    if (!existing) return c.json(createErrorResponse('活動場所が見つかりません', 'NOT_FOUND'), 404);
+    if (existing.createdBy !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(createErrorResponse('権限がありません', 'FORBIDDEN'), 403);
+    }
+
+    const form = await c.req.formData();
+    const file = form.get('file') as any;
+    if (!file || typeof file.arrayBuffer !== 'function') {
+      return c.json(createErrorResponse('ファイルが見つかりません', 'NO_FILE'), 400);
+    }
+
+    const filename = file.name || 'upload';
+    const buffer = await file.arrayBuffer();
+    const key = `activity_places/${id}/${uuidv4()}-${filename}`;
+
+    const r2 = (c.env as any).ACTIVITY_PLACES;
+    if (!r2) return c.json(createErrorResponse('R2 バケットが未設定です', 'R2_NOT_CONFIGURED'), 500);
+
+    await r2.put(key, buffer, { httpMetadata: { contentType: file.type || 'application/octet-stream' } });
+
+    const photoId = crypto.randomUUID();
+    const created = await db.insert(activityPlacePhotos).values({
+      id: photoId,
+      placeId: id,
+      url: `r2://${key}`,
+      filename,
+      metadata: null,
+      sortOrder: 0,
+      isPrimary: 0,
+    }).returning().get();
+
+    // update photo_count cache
+    try {
+      const current = await db.select().from(activityPlaces).where(eq(activityPlaces.id, id)).get();
+      const newCount = (current.photoCount ?? 0) + 1;
+      await db.update(activityPlaces).set({ photoCount: newCount }).where(eq(activityPlaces.id, id));
+    } catch (_e) { }
+
+    return c.json(created, 201);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    const errDetails: any = {};
+    if (error instanceof Error) {
+      errDetails.name = error.name;
+      errDetails.message = error.message;
+      errDetails.stack = error.stack;
+      if ((error as any).cause) errDetails.cause = (error as any).cause;
+    } else {
+      errDetails.value = error;
+    }
+    try { console.error('PHOTO_UPLOAD_ERROR', errDetails); } catch (_) {}
+    return c.json(createErrorResponse(message, 'PHOTO_UPLOAD_ERROR', errDetails), 500);
+  }
+});
+
+// Generate signed URL for a photo (short-lived token pointing to R2 proxy)
+activityPlacesRouter.get('/:id/photos/:photoId/signed_url', requireAuth, async (c) => {
+  try {
+    const id = c.req.param('id');
+    const photoId = c.req.param('photoId');
+    const auth = c.env.auth as any;
+    const db = getDb(c);
+
+    const existing = await db.select().from(activityPlaces).where(eq(activityPlaces.id, id)).get();
+    if (!existing) return c.json(createErrorResponse('活動場所が見つかりません', 'NOT_FOUND'), 404);
+    // ownership not strictly required for read, but requireAuth ensures user
+
+    const photo = await db.select().from(activityPlacePhotos).where(eq(activityPlacePhotos.id, photoId)).get();
+    if (!photo) return c.json(createErrorResponse('写真が見つかりません', 'NOT_FOUND'), 404);
+
+    const key = (photo.url as string).replace('r2://', '');
+    const expires = parseInt(c.req.query('expires') || '300', 10); // seconds
+    const secret = (c.env as any).JWT_SECRET;
+    if (!secret) return c.json(createErrorResponse('JWT_SECRET 未設定', 'CONFIG_ERROR'), 500);
+
+    // payload contains minimal info: key and requester id
+    const payload: any = { userId: auth.user.userId, key };
+    const token = await generateJWT(payload, secret, expires);
+
+    const url = `${new URL(c.req.url).origin}/r2/${token}`;
+    return c.json({ url, expires_in: expires }, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'SIGNED_URL_ERROR'), 500);
+  }
+});
+
+// Delete photo (remove from R2 and DB)
+activityPlacesRouter.delete('/:id/photos/:photoId', requireAuth, async (c) => {
+  try {
+    const id = c.req.param('id');
+    const photoId = c.req.param('photoId');
+    const auth = c.env.auth as any;
+    const db = getDb(c);
+
+    const existing = await db.select().from(activityPlaces).where(eq(activityPlaces.id, id)).get();
+    if (!existing) return c.json(createErrorResponse('活動場所が見つかりません', 'NOT_FOUND'), 404);
+    if (existing.createdBy !== auth.user.userId && auth.user.role !== 'admin') {
+      return c.json(createErrorResponse('権限がありません', 'FORBIDDEN'), 403);
+    }
+
+    const photo = await db.select().from(activityPlacePhotos).where(eq(activityPlacePhotos.id, photoId)).get();
+    if (!photo) return c.json(createErrorResponse('写真が見つかりません', 'NOT_FOUND'), 404);
+
+    const r2 = (c.env as any).ACTIVITY_PLACES;
+    if (r2 && typeof photo.url === 'string' && photo.url.startsWith('r2://')) {
+      const key = photo.url.replace('r2://', '');
+      try { await r2.delete(key); } catch (_) { }
+    }
+
+    await db.delete(activityPlacePhotos).where(eq(activityPlacePhotos.id, photoId));
+
+    // decrement photo_count cache
+    try {
+      const current = await db.select().from(activityPlaces).where(eq(activityPlaces.id, id)).get();
+      const newCount = Math.max(0, (current.photoCount ?? 1) - 1);
+      await db.update(activityPlaces).set({ photoCount: newCount }).where(eq(activityPlaces.id, id));
+    } catch (_e) { }
+
+    return c.json({ success: true }, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'PHOTO_DELETE_ERROR'), 500);
   }
 });

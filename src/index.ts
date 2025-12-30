@@ -23,6 +23,7 @@ import { settingsRouter } from './routes/settings';
 import { healthRouter } from './routes/health';
 import { activityPlacesRouter } from './routes/activity_places';
 import { debugRouter } from './routes/debug_db';
+import { r2Router } from './routes/r2';
 import { authMiddleware } from './middleware/auth';
 import { OAuthProviderManager } from './auth/providers/manager';
 import { GoogleOAuthProvider } from './auth/providers/google';
@@ -95,6 +96,7 @@ const routes: RouteEntry[] = [
   ['hashtags', hashtagsRouter],
   ['settings', settingsRouter],
   ['activity_places', activityPlacesRouter],
+  ['r2', r2Router],
   ['debug', debugRouter],
   ['health', healthRouter],
 ];
