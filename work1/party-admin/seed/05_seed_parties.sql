@@ -1,0 +1,12 @@
+BEGIN TRANSACTION;
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('ldp', '自由民主党', '#124391', 'LDP', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('cdp', '立憲民主党', '#005299', 'CDP', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('jip', '日本維新の会', '#A8C300', 'JIP', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('komei', '公明党', '#F39800', 'Komeito', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('dpfp', '国民民主党', '#FFD700', 'DPFP', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('jcp', '日本共産党', '#DB001C', 'JCP', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('reiwa', 'れいわ新選組', '#E6007E', 'Reiwa', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('sdp', '社会民主党', '#00A1E9', 'SDP', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('sansei', '参政党', '#FF8C00', 'Sanseito', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 0);
+INSERT INTO m_parties (id, name, color_code, notes, created_at, updated_at, alive) VALUES ('cpj', '日本保守党', '#000000', 'CPJ', '2025-12-29 05:04:44', '2025-12-29 05:04:44', 1);
+COMMIT;

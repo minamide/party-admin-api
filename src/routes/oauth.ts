@@ -158,6 +158,7 @@ oauthRouter.post('/exchange', async (c: Context) => {
     );
   } catch (error: unknown) {
     const message = getErrorMessage(error);
+    console.error('OAuth exchange error:', error);
     return c.json(
       createErrorResponse(message, 'OAUTH_EXCHANGE_ERROR'),
       500

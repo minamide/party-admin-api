@@ -5,6 +5,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "party-admin-api",
+	"account_id": "08415d6f475854d9582414007d6fb2b9",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-12-21",
 	"compatibility_flags": ["nodejs_compat"],
@@ -19,7 +20,7 @@
 		{
 			"binding": "DB",
 			"database_name": "party-admin-db",
-			"database_id": "f060d503-6b8c-48af-81df-fa4e13005448",
+			"database_id": "c5c1aead-83c0-4006-a0a1-ebca579db875",
 			"migrations_dir": "./drizzle"
 		}
 	],
