@@ -288,6 +288,54 @@ export const postMediaVersions = sqliteTable('post_media_versions', {
   createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// ----------------------------------------
+// 活動場所 (activity_places) / 写真 / 種別マスター
+// ----------------------------------------
+export const activityPlaces = sqliteTable('activity_places', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  address: text('address'),
+  cityCode: text('city_code'),
+  latitude: text('latitude'),
+  longitude: text('longitude'),
+  locationGeojson: text('location_geojson'),
+  radiusM: integer('radius_m').notNull().default(50),
+  capacity: integer('capacity'),
+  activityTypes: text('activity_types'), // JSON array (legacy / optional)
+  notes: text('notes'),
+  photoCount: integer('photo_count').notNull().default(0),
+  isActive: integer('is_active').notNull().default(1),
+  createdBy: text('created_by'),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const activityPlacePhotos = sqliteTable('activity_place_photos', {
+  id: text('id').primaryKey(),
+  placeId: text('place_id').notNull().references(() => activityPlaces.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  filename: text('filename'),
+  metadata: text('metadata'), // JSON
+  sortOrder: integer('sort_order').notNull().default(0),
+  isPrimary: integer('is_primary').notNull().default(0),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const mActivityTypes = sqliteTable('m_activity_types', {
+  typeCode: text('type_code').primaryKey(),
+  labelJa: text('label_ja').notNull(),
+  labelEn: text('label_en'),
+  sortOrder: integer('sort_order').notNull().default(100),
+  isActive: integer('is_active').notNull().default(1),
+});
+
+export const relActivityPlaceTypes = sqliteTable('rel_activity_place_types', {
+  placeId: text('place_id').notNull().references(() => activityPlaces.id, { onDelete: 'cascade' }),
+  typeCode: text('type_code').notNull().references(() => mActivityTypes.typeCode, { onDelete: 'restrict' }),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.placeId, table.typeCode] }),
+}));
+
 /**
  * ソーシャルアカウント連携テーブル
  * ユーザーが複数のOAuthプロバイダーでアカウントを連携可能

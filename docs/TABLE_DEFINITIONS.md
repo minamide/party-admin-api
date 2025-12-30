@@ -151,3 +151,58 @@
 
 保存先:
 - [work1/party-admin/TABLE_DEFINITIONS.md](work1/party-admin/TABLE_DEFINITIONS.md)
+
+---
+
+## 活動場所（activity_places）と写真（activity_place_photos）サポート
+複数写真アップロードをサポートするため、以下のテーブルをこのマイグレーションに追加しました。
+
+- `activity_places` — 活動場所の主テーブル。緯度/経度、半径、収容人数、`activity_types`（JSON配列）等を保持します。`photo_count` は写真数のキャッシュです。
+- `activity_place_photos` — 複数写真を格納する正規化テーブル。各写真は外部ストレージに保存し、`url` を保持します。`sort_order` と `is_primary` で表示順・代表画像を制御します。
+
+利用例（フロント→バックエンド）:
+- 写真アップロードワークフロー: フロントで複数ファイルを受け取り、ストレージにアップロード → 各 URL をバックエンドに POST して `activity_place_photos` に登録。
+- 場所作成時に写真を同時登録する場合はトランザクションで `activity_places` を作成後、`activity_place_photos` を挿入して `photo_count` を更新します。
+
+注意:
+- D1/SQLite はトランザクションをサポートしますが、外部ストレージの整合性（ファイル削除/DB削除の整合）はアプリ側でケアしてください。
+- 画像メタデータは `metadata` に JSON 形式で保存すると柔軟です（例: {"width":1024,"height":768}).
+
+---
+
+## 活動種別マスター（m_activity_types）と紐付けテーブル
+活動種別はマスターで管理し、`rel_activity_place_types` で場所と多対多に紐付けます。これにより日本語ラベルの管理、検索・集計、管理画面での編集が容易になります。
+
+例: スキーマ
+```sql
+CREATE TABLE IF NOT EXISTS m_activity_types (
+  type_code TEXT PRIMARY KEY,    -- コード例: 'street','leaflet','poster'
+  label_ja TEXT NOT NULL,        -- 日本語表示名
+  label_en TEXT,                 -- 英語表示名（任意）
+  sort_order INTEGER DEFAULT 100,
+  is_active INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS rel_activity_place_types (
+  place_id TEXT NOT NULL,
+  type_code TEXT NOT NULL,
+  PRIMARY KEY (place_id, type_code),
+  FOREIGN KEY (place_id) REFERENCES activity_places(id) ON DELETE CASCADE,
+  FOREIGN KEY (type_code) REFERENCES m_activity_types(type_code) ON DELETE RESTRICT
+);
+```
+
+初期データ（例）:
+```sql
+INSERT OR IGNORE INTO m_activity_types(type_code,label_ja,sort_order,is_active) VALUES
+  ('street','街宣',10,1),
+  ('leaflet','チラシ配り',20,1),
+  ('poster','ポスター掲示',30,1),
+  ('stall','街頭ブース',40,1);
+```
+
+運用上の注意:
+- フロントでは管理 API から `m_activity_types` の `label_ja` を取得してチェックボックスを表示します。送信は `type_code` 配列。
+- 種別の追加・ラベル変更は管理画面で行い、`is_active` により一時非表示が可能です。
+- 既存の `activity_places.activity_types`（JSON 文字列）がある場合は移行スクリプトで `rel_activity_place_types` にデータを移してください（アプリ側でパースして挿入する方法を推奨）。
+

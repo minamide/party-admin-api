@@ -21,6 +21,8 @@ import { attachmentsRouter } from './routes/attachments';
 import { hashtagsRouter } from './routes/hashtags';
 import { settingsRouter } from './routes/settings';
 import { healthRouter } from './routes/health';
+import { activityPlacesRouter } from './routes/activity_places';
+import { debugRouter } from './routes/debug_db';
 import { authMiddleware } from './middleware/auth';
 import { OAuthProviderManager } from './auth/providers/manager';
 import { GoogleOAuthProvider } from './auth/providers/google';
@@ -92,6 +94,8 @@ const routes: RouteEntry[] = [
   ['attachments', attachmentsRouter],
   ['hashtags', hashtagsRouter],
   ['settings', settingsRouter],
+  ['activity_places', activityPlacesRouter],
+  ['debug', debugRouter],
   ['health', healthRouter],
 ];
 
