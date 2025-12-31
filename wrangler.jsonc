@@ -8,7 +8,9 @@
 	"account_id": "08415d6f475854d9582414007d6fb2b9",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-12-21",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
 	"assets": {
 		"binding": "ASSETS",
 		"directory": "./public"
@@ -37,8 +39,10 @@
 		"NODE_ENV": "development",
 		"BASE_URL": "http://localhost:3000",
 		"FROM_EMAIL": "noreply@party-admin.local",
-		"EMAIL_SERVICE": "development"
+		"EMAIL_SERVICE": "development",
+		"ESTAT_APP_ID": "189365f1de80b2636184a9482231067ce326bdbe"
 	}
+	
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

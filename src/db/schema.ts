@@ -360,5 +360,74 @@ export const socialAccounts = sqliteTable('social_accounts', {
  * CSRF 攻撃対策用の state 検証
  */
 // Already defined above - removed duplicate
+// ----------------------------------------
+// 地域メッシュ統計 (Mesh Statistics) キャッシュ
+// ----------------------------------------
+export const meshStatistics = sqliteTable('mesh_statistics', {
+  meshCode: text('mesh_code').primaryKey(),
+  households: integer('households'),
+  population: integer('population'),
+  updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
 
-
+// ----------------------------------------
+// 国勢調査メッシュデータ 2020 (Census Mesh 2020)
+// ----------------------------------------
+export const censusMesh2020 = sqliteTable('census_mesh_2020', {
+  keyCode: text('key_code').primaryKey(),
+  htkSyori: integer('htk_syori'),
+  htkSaki: text('htk_saki'),
+  gassan: text('gassan'),
+  // 人口統計 (Population Statistics)
+  t001101001: integer('t001101001'), // 人口（総数）
+  t001101002: integer('t001101002'), // 人口（男）
+  t001101003: integer('t001101003'), // 人口（女）
+  t001101004: integer('t001101004'), // 0～14歳人口 総数
+  t001101005: integer('t001101005'), // 0～14歳人口 男
+  t001101006: integer('t001101006'), // 0～14歳人口 女
+  t001101007: integer('t001101007'), // 15歳以上人口 総数
+  t001101008: integer('t001101008'), // 15歳以上人口 男
+  t001101009: integer('t001101009'), // 15歳以上人口 女
+  t001101010: integer('t001101010'), // 15～64歳人口 総数
+  t001101011: integer('t001101011'), // 15～64歳人口 男
+  t001101012: integer('t001101012'), // 15～64歳人口 女
+  t001101013: integer('t001101013'), // 18歳以上人口 総数
+  t001101014: integer('t001101014'), // 18歳以上人口 男
+  t001101015: integer('t001101015'), // 18歳以上人口 女
+  t001101016: integer('t001101016'), // 20歳以上人口 総数
+  t001101017: integer('t001101017'), // 20歳以上人口 男
+  t001101018: integer('t001101018'), // 20歳以上人口 女
+  t001101019: integer('t001101019'), // 65歳以上人口 総数
+  t001101020: integer('t001101020'), // 65歳以上人口 男
+  t001101021: integer('t001101021'), // 65歳以上人口 女
+  t001101022: integer('t001101022'), // 75歳以上人口 総数
+  t001101023: integer('t001101023'), // 75歳以上人口 男
+  t001101024: integer('t001101024'), // 75歳以上人口 女
+  t001101025: integer('t001101025'), // 85歳以上人口 総数
+  t001101026: integer('t001101026'), // 85歳以上人口 男
+  t001101027: integer('t001101027'), // 85歳以上人口 女
+  t001101028: integer('t001101028'), // 95歳以上人口 総数
+  t001101029: integer('t001101029'), // 95歳以上人口 男
+  t001101030: integer('t001101030'), // 95歳以上人口 女
+  t001101031: integer('t001101031'), // 外国人人口 総数
+  t001101032: integer('t001101032'), // 外国人人口 男
+  t001101033: integer('t001101033'), // 外国人人口 女
+  // 世帯統計 (Household Statistics)
+  t001101034: integer('t001101034'), // 世帯総数
+  t001101035: integer('t001101035'), // 一般世帯数
+  t001101036: integer('t001101036'), // 1人世帯数
+  t001101037: integer('t001101037'), // 2人世帯数
+  t001101038: integer('t001101038'), // 3人世帯数
+  t001101039: integer('t001101039'), // 4人世帯数
+  t001101040: integer('t001101040'), // 5人世帯数
+  t001101041: integer('t001101041'), // 6人世帯数
+  t001101042: integer('t001101042'), // 7人以上世帯数
+  t001101043: integer('t001101043'), // 親族のみ世帯数
+  t001101044: integer('t001101044'), // 核家族世帯数
+  t001101045: integer('t001101045'), // 核家族以外世帯数
+  t001101046: integer('t001101046'), // 6歳未満世帯員のいる世帯数
+  t001101047: integer('t001101047'), // 65歳以上世帯員のいる世帯数
+  t001101048: integer('t001101048'), // 世帯主20～29歳の1人世帯
+  t001101049: integer('t001101049'), // 高齢単身世帯
+  t001101050: integer('t001101050'), // 高齢夫婦世帯
+});

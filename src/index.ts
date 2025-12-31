@@ -22,6 +22,8 @@ import { hashtagsRouter } from './routes/hashtags';
 import { settingsRouter } from './routes/settings';
 import { healthRouter } from './routes/health';
 import { activityPlacesRouter } from './routes/activity_places';
+import { statisticsRouter } from './routes/statistics';
+import { censusMeshRouter } from './routes/census_mesh';
 import { debugRouter } from './routes/debug_db';
 import { r2Router } from './routes/r2';
 import { authMiddleware } from './middleware/auth';
@@ -29,7 +31,11 @@ import { OAuthProviderManager } from './auth/providers/manager';
 import { GoogleOAuthProvider } from './auth/providers/google';
 import { cors } from 'hono/cors';
 
-const app = new Hono<{ Bindings: CloudflareBindings }>();
+type Variables = {
+  oauthManager: OAuthProviderManager;
+};
+
+const app = new Hono<{ Bindings: CloudflareBindings; Variables: Variables }>();
 
 // Global OAuth manager instance
 const globalOAuthManager = new OAuthProviderManager();
@@ -57,10 +63,10 @@ app.use('/oauth/*', async (c, next) => {
     globalOAuthManager.registerProvider('google', googleProvider);
     console.log('OAuth: Google provider registered');
   }
-  
+
   // Store manager in context for use in routes
   c.set('oauthManager', globalOAuthManager);
-  
+
   await next();
 });
 
@@ -97,9 +103,11 @@ const routes: RouteEntry[] = [
   ['settings', settingsRouter],
   ['activity_places', activityPlacesRouter],
   ['volunteer/locations', activityPlacesRouter],
+  ['census-mesh', censusMeshRouter],
   ['r2', r2Router],
   ['debug', debugRouter],
   ['health', healthRouter],
+  ['statistics', statisticsRouter],
 ];
 
 // Register all routes
