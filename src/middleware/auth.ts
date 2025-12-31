@@ -30,11 +30,22 @@ export interface AuthContext {
  * @param next - Next middleware
  */
 export async function authMiddleware(c: Context, next: Next): Promise<void> {
+  const pathname = new URL(c.req.url).pathname;
+  // Public routes that do not require auth
+  const publicPrefixes = [
+    '/health',
+  ];
+
+  const isPublic = publicPrefixes.some(prefix => pathname.startsWith(prefix));
+
   const authHeader = c.req.header('Authorization');
-  console.log('authMiddleware: Processing request.');
+  if (!isPublic) console.log('authMiddleware: Processing request.');
 
   // Authorization ヘッダーがない場合
   if (!authHeader) {
+    if (isPublic) {
+      return next();
+    }
     c.env.auth = { error: 'Missing Authorization header' } as AuthContext;
     console.log('authMiddleware: Missing Authorization header.');
     await next();
@@ -43,6 +54,9 @@ export async function authMiddleware(c: Context, next: Next): Promise<void> {
 
   // Bearer スキーム以外のサポート
   if (!authHeader.startsWith('Bearer ')) {
+    if (isPublic) {
+      return next();
+    }
     c.env.auth = { error: 'Invalid Authorization header format' } as AuthContext;
     console.log('authMiddleware: Invalid Authorization header format.');
     await next();

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { meshStatistics } from '../db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { meshStatistics, censusMesh2020 } from '../db/schema';
+import { eq, inArray, like } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { sql } from 'drizzle-orm';
@@ -9,82 +9,111 @@ export const statisticsRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 /**
  * Get household statistics for a specific mesh code
+ * 优先: ローカルの census_mesh_2020 から取得（静的データ）
  */
 statisticsRouter.get('/mesh/:meshCode', async (c) => {
     const meshCode = c.req.param('meshCode');
     try {
         const db = getDb(c);
-        const appId = c.env.ESTAT_APP_ID;
 
-        if (!appId) {
-            console.error('[MESH_STATS] Error: ESTAT_APP_ID is not defined');
-            return c.json(createErrorResponse('ESTAT_APP_ID not configured', 'CONFIG_ERROR'), 500);
+        const codeLen = meshCode.length;
+
+        // 0) 短すぎるコードは 400
+        if (codeLen < 4) {
+            return c.json(createErrorResponse('meshCode must be at least 4 digits', 'VALIDATION_ERROR'), 400);
         }
 
-        // 1. Ensure Table exists (Manual Check)
+        // A) 4〜7桁: 前方一致で集計（合計値を返す）
+        if (codeLen >= 4 && codeLen <= 7) {
+            const summary = await db.select({
+                totalPopulation: sql<number>`SUM(COALESCE(${censusMesh2020.t001101001}, 0))`,
+                totalHouseholds: sql<number>`SUM(COALESCE(${censusMesh2020.t001101034}, 0))`,
+                totalMale: sql<number>`SUM(COALESCE(${censusMesh2020.t001101002}, 0))`,
+                totalFemale: sql<number>`SUM(COALESCE(${censusMesh2020.t001101003}, 0))`,
+                totalAge0to14: sql<number>`SUM(COALESCE(${censusMesh2020.t001101004}, 0))`,
+                totalAge15to64: sql<number>`SUM(COALESCE(${censusMesh2020.t001101010}, 0))`,
+                totalAge65Plus: sql<number>`SUM(COALESCE(${censusMesh2020.t001101019}, 0))`,
+                totalAge75Plus: sql<number>`SUM(COALESCE(${censusMesh2020.t001101022}, 0))`,
+                totalForeigners: sql<number>`SUM(COALESCE(${censusMesh2020.t001101031}, 0))`,
+                meshCount: sql<number>`COUNT(*)`,
+            })
+            .from(censusMesh2020)
+            .where(like(censusMesh2020.keyCode, `${meshCode}%`))
+            .get();
+
+            if (!summary || summary.meshCount === 0) {
+                return c.json(createErrorResponse('該当データがありません (local dataset)', 'NOT_FOUND'), 404);
+            }
+
+            return c.json({
+                keyCodePrefix: meshCode,
+                summary,
+                source: 'local-aggregate',
+            }, 200);
+        }
+        // B) 8桁以上: 完全一致で単一メッシュを取得。見つからなければ前方一致で集計を返す。
         try {
-            await db.run(sql`CREATE TABLE IF NOT EXISTS mesh_statistics (
-            mesh_code TEXT PRIMARY KEY, 
-            households INTEGER, 
-            population INTEGER, 
-            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )`);
+            const local = await db.select({
+                meshCode: censusMesh2020.keyCode,
+                households: censusMesh2020.t001101034,
+                population: censusMesh2020.t001101001,
+            })
+            .from(censusMesh2020)
+            .where(eq(censusMesh2020.keyCode, meshCode))
+            .get();
+
+            if (local) {
+                return c.json({
+                    meshCode: local.meshCode,
+                    households: local.households ?? 0,
+                    population: local.population ?? 0,
+                    source: 'local',
+                }, 200);
+            }
         } catch (e) {
-            console.error('[MESH_STATS] Table creation failed:', e);
+            console.warn('[MESH_STATS] Local lookup failed:', e);
         }
 
-        // 2. Check Cache
+        // 2) 旧キャッシュテーブルに残っていれば返す（後方互換）
         try {
             const cached = await db.select().from(meshStatistics).where(eq(meshStatistics.meshCode, meshCode)).get();
-            if (cached) return c.json(cached, 200);
+            if (cached) {
+                return c.json({ ...cached, source: 'cache' }, 200);
+            }
         } catch (e) {
-            console.warn('[MESH_STATS] Cache fetch failed (might be first run):', e);
+            console.warn('[MESH_STATS] Cache fetch failed:', e);
         }
 
-        // 3. Determine statsDataId for 2020 Census (Standard 10-digit IDs)
-        // 0003445101: 2020 Census 1km Mesh (Population/Households)
-        // 0003448101: 2020 Census 500m Mesh (Population/Households)
-        let statsDataId = meshCode.length >= 9 ? '0003448101' : '0003445101';
+        // 2.5) 8桁以上で完全一致が無い場合、前方一致で集計を返す（便宜的フォールバック）
+        if (codeLen >= 8) {
+            const summary = await db.select({
+                totalPopulation: sql<number>`SUM(COALESCE(${censusMesh2020.t001101001}, 0))`,
+                totalHouseholds: sql<number>`SUM(COALESCE(${censusMesh2020.t001101034}, 0))`,
+                totalMale: sql<number>`SUM(COALESCE(${censusMesh2020.t001101002}, 0))`,
+                totalFemale: sql<number>`SUM(COALESCE(${censusMesh2020.t001101003}, 0))`,
+                totalAge0to14: sql<number>`SUM(COALESCE(${censusMesh2020.t001101004}, 0))`,
+                totalAge15to64: sql<number>`SUM(COALESCE(${censusMesh2020.t001101010}, 0))`,
+                totalAge65Plus: sql<number>`SUM(COALESCE(${censusMesh2020.t001101019}, 0))`,
+                totalAge75Plus: sql<number>`SUM(COALESCE(${censusMesh2020.t001101022}, 0))`,
+                totalForeigners: sql<number>`SUM(COALESCE(${censusMesh2020.t001101031}, 0))`,
+                meshCount: sql<number>`COUNT(*)`,
+            })
+            .from(censusMesh2020)
+            .where(like(censusMesh2020.keyCode, `${meshCode}%`))
+            .get();
 
-        // 4. Fetch from e-Stat
-        const url = `https://api.e-stat.go.jp/rest/3.0/app/json/getStatsData?appId=${appId}&statsDataId=${statsDataId}&areaCode=${meshCode}&cdCat01=00101`;
-
-        console.log(`[MESH_STATS] Fetching from e-Stat: ${meshCode}`);
-        const response = await fetch(url);
-        if (!response.ok) {
-            console.error(`[MESH_STATS] e-Stat API Error: ${response.status} ${response.statusText}`);
-            throw new Error(`e-Stat API returned ${response.status}`);
+            if (summary && summary.meshCount > 0) {
+                return c.json({
+                    keyCodePrefix: meshCode,
+                    summary,
+                    source: 'local-aggregate',
+                    note: 'fallback prefix aggregate (no exact match)',
+                }, 200);
+            }
         }
 
-        const data: any = await response.json();
-
-        // Check if e-Stat returned an application error (like invalid appId)
-        const resultStatus = data?.GET_STATS_DATA?.RESULT?.STATUS;
-        if (resultStatus !== undefined && resultStatus !== 0) {
-            const errorMsg = data?.GET_STATS_DATA?.RESULT?.ERROR_MSG || 'e-Stat domain error';
-            console.error(`[MESH_STATS] e-Stat Application Error: ${resultStatus} - ${errorMsg}`);
-            throw new Error(errorMsg);
-        }
-
-        const dataInf = data?.GET_STATS_DATA?.STATISTICAL_DATA?.DATA_INF?.VALUE;
-
-        let households = 0;
-        if (dataInf) {
-            const valObj = Array.isArray(dataInf) ? dataInf[0] : dataInf;
-            households = parseInt(valObj['$'], 10) || 0;
-        }
-
-        // 5. Save to Cache
-        const result = await db.insert(meshStatistics).values({
-            meshCode,
-            households,
-            updatedAt: new Date().toISOString()
-        }).onConflictDoUpdate({
-            target: meshStatistics.meshCode,
-            set: { households, updatedAt: new Date().toISOString() }
-        }).returning().get();
-
-        return c.json(result, 200);
+        // 3) ローカルに存在しない場合は 404 を返す（e-Stat には依存しない方針）
+        return c.json(createErrorResponse('該当データがありません (local dataset)', 'NOT_FOUND'), 404);
     } catch (error: unknown) {
         const message = getErrorMessage(error);
         console.error('[MESH_STATS_ERROR]:', message);
@@ -105,34 +134,22 @@ statisticsRouter.get('/mesh_batch', async (c) => {
 
         const db = getDb(c);
 
-        // Ensure Table exists
-        try {
-            await db.run(sql`CREATE TABLE IF NOT EXISTS mesh_statistics (
-                mesh_code TEXT PRIMARY KEY, 
-                households INTEGER, 
-                population INTEGER, 
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )`);
-        } catch (e) { }
+        // ローカル census_mesh_2020 からまとめて取得
+        const localResults = await db.select({
+            meshCode: censusMesh2020.keyCode,
+            households: censusMesh2020.t001101034,
+            population: censusMesh2020.t001101001,
+        })
+        .from(censusMesh2020)
+        .where(inArray(censusMesh2020.keyCode, codes))
+        .all();
 
-        // Find existing in cache
-        const cachedResults = await db.select().from(meshStatistics).where(inArray(meshStatistics.meshCode, codes)).all();
-
-        const cachedMap = new Map(cachedResults.map(r => [r.meshCode, r]));
-        const results = [];
-        const missingCodes = [];
-
-        for (const code of codes) {
-            if (cachedMap.has(code)) {
-                results.push(cachedMap.get(code));
-            } else {
-                missingCodes.push(code);
-            }
-        }
+        const foundSet = new Set(localResults.map(r => r.meshCode));
+        const missingCodes = codes.filter(code => !foundSet.has(code));
 
         return c.json({
-            data: results,
-            missing: missingCodes
+            data: localResults.map(r => ({ ...r, households: r.households ?? 0, population: r.population ?? 0, source: 'local' })),
+            missing: missingCodes,
         }, 200);
     } catch (error: unknown) {
         const message = getErrorMessage(error);
