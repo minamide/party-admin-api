@@ -127,10 +127,22 @@ statisticsRouter.get('/mesh/:meshCode', async (c) => {
 statisticsRouter.get('/mesh_batch', async (c) => {
     try {
         const codesStr = c.req.query('codes');
-        if (!codesStr) return c.json({ data: [], missing: [] }, 200);
+        if (!codesStr) {
+            c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+            c.header('Access-Control-Allow-Origin', '*');
+            c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            return c.json({ data: [], missing: [] }, 200);
+        }
 
         const codes = codesStr.split(',').filter(c => c.length > 0);
-        if (codes.length === 0) return c.json({ data: [], missing: [] }, 200);
+        if (codes.length === 0) {
+            c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+            c.header('Access-Control-Allow-Origin', '*');
+            c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            return c.json({ data: [], missing: [] }, 200);
+        }
 
         const db = getDb(c);
 
@@ -147,6 +159,10 @@ statisticsRouter.get('/mesh_batch', async (c) => {
         const foundSet = new Set(localResults.map(r => r.meshCode));
         const missingCodes = codes.filter(code => !foundSet.has(code));
 
+        c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+        c.header('Access-Control-Allow-Origin', '*');
+        c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         return c.json({
             data: localResults.map(r => ({ ...r, households: r.households ?? 0, population: r.population ?? 0, source: 'local' })),
             missing: missingCodes,
@@ -156,4 +172,113 @@ statisticsRouter.get('/mesh_batch', async (c) => {
         console.error('[MESH_BATCH_STATS_ERROR]:', message);
         return c.json(createErrorResponse(message, 'MESH_BATCH_STATS_ERROR'), 500);
     }
+});
+
+/**
+ * Batch get mesh statistics (POST variant)
+ * Accepts JSON body: { codes: string[] }
+ * This complements the GET query-based endpoint and allows larger payloads.
+ */
+statisticsRouter.post('/mesh_batch', async (c) => {
+    try {
+        const body = await c.req.json();
+        const codes = Array.isArray(body?.codes) ? body.codes.map(String).filter((s: string) => s.length > 0) : [];
+        if (codes.length === 0) {
+            c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+            c.header('Access-Control-Allow-Origin', '*');
+            c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            return c.json({ data: [], missing: [] }, 200);
+        }
+
+        const db = getDb(c);
+
+        // DB drivers commonly limit the number of placeholders in an IN() clause.
+        // Chunk the requested codes to avoid exceeding that limit and merge results.
+        // Conservative chunk size to avoid SQLite/D1 max variable limit errors
+        const chunkSize = 100;
+        const results: Array<{ meshCode: string; households: number | null; population: number | null; }> = [];
+
+        for (let i = 0; i < codes.length; i += chunkSize) {
+            const chunk = codes.slice(i, i + chunkSize);
+            try {
+                const chunkResults = await db.select({
+                    meshCode: censusMesh2020.keyCode,
+                    households: censusMesh2020.t001101034,
+                    population: censusMesh2020.t001101001,
+                })
+                .from(censusMesh2020)
+                .where(inArray(censusMesh2020.keyCode, chunk))
+                .all();
+
+                results.push(...chunkResults);
+            } catch (err) {
+                console.error('[MESH_BATCH_STATS_ERROR_CHUNK]:', err);
+                // continue with other chunks rather than failing entire request
+            }
+        }
+
+        // Deduplicate results by meshCode
+        const resultMap = new Map<string, { meshCode: string; households: number | null; population: number | null; }>();
+        results.forEach(r => {
+            if (r && r.meshCode) resultMap.set(r.meshCode, r as any);
+        });
+
+        const foundSet = new Set(resultMap.keys());
+        let missingCodes = codes.filter(code => !foundSet.has(code));
+
+        // Attempt prefix-aggregate fallback for missing codes (match GET /mesh/:meshCode behaviour)
+        const fallbackData: Array<{ meshCode: string; households: number; population: number; source: string; }> = [];
+        const stillMissing: string[] = [];
+
+        for (const code of missingCodes) {
+            try {
+                const codeLen = code.length;
+                if (codeLen >= 4) {
+                    const summary = await db.select({
+                        totalPopulation: sql<number>`SUM(COALESCE(${censusMesh2020.t001101001}, 0))`,
+                        totalHouseholds: sql<number>`SUM(COALESCE(${censusMesh2020.t001101034}, 0))`,
+                        meshCount: sql<number>`COUNT(*)`,
+                    })
+                    .from(censusMesh2020)
+                    .where(like(censusMesh2020.keyCode, `${code}%`))
+                    .get();
+
+                    if (summary && summary.meshCount > 0) {
+                        fallbackData.push({ meshCode: code, households: summary.totalHouseholds ?? 0, population: summary.totalPopulation ?? 0, source: 'local-aggregate' });
+                        continue;
+                    }
+                }
+                stillMissing.push(code);
+            } catch (err) {
+                console.warn('[MESH_BATCH_FALLBACK_ERROR]:', code, err);
+                stillMissing.push(code);
+            }
+        }
+
+        // Combine exact-match results and fallback aggregate results
+        const exactData = Array.from(resultMap.values()).map(r => ({ ...r, households: r.households ?? 0, population: r.population ?? 0, source: 'local' }));
+        const allData = exactData.concat(fallbackData);
+
+        c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+        c.header('Access-Control-Allow-Origin', '*');
+        c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        return c.json({
+            data: allData,
+            missing: stillMissing,
+        }, 200);
+    } catch (error: unknown) {
+        const message = getErrorMessage(error);
+        console.error('[MESH_BATCH_STATS_ERROR_POST]:', message);
+        return c.json(createErrorResponse(message, 'MESH_BATCH_STATS_ERROR_POST'), 500);
+    }
+});
+
+// OPTIONS preflight handler for mesh_batch
+statisticsRouter.options('/mesh_batch', async (c) => {
+    c.header('Access-Control-Allow-Origin', '*');
+    c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    c.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    return c.text('', 204);
 });
