@@ -199,8 +199,13 @@ statisticsRouter.post('/mesh_batch', async (c) => {
         const chunkSize = 100;
         const results: Array<{ meshCode: string; households: number | null; population: number | null; }> = [];
 
-        for (let i = 0; i < codes.length; i += chunkSize) {
-            const chunk = codes.slice(i, i + chunkSize);
+        // Separate codes into exact matches (length >= 8) and prefix matches (length < 8)
+        const exactCodes = codes.filter(c => c.length >= 8);
+        const prefixCodes = codes.filter(c => c.length >= 4 && c.length < 8);
+
+        // 1) Handle exact matches in chunks
+        for (let i = 0; i < exactCodes.length; i += chunkSize) {
+            const chunk = exactCodes.slice(i, i + chunkSize);
             try {
                 const chunkResults = await db.select({
                     meshCode: censusMesh2020.keyCode,
@@ -210,11 +215,27 @@ statisticsRouter.post('/mesh_batch', async (c) => {
                 .from(censusMesh2020)
                 .where(inArray(censusMesh2020.keyCode, chunk))
                 .all();
-
                 results.push(...chunkResults);
             } catch (err) {
-                console.error('[MESH_BATCH_STATS_ERROR_CHUNK]:', err);
-                // continue with other chunks rather than failing entire request
+                console.error('[MESH_BATCH_STATS_ERROR_EXACT_CHUNK]:', err);
+            }
+        }
+
+        // 2) Handle prefix matches (e.g. 7-digit 5km blocks)
+        // We run these sequentially as they are expected to be few for a visible area.
+        for (const prefix of prefixCodes) {
+            try {
+                const prefixResults = await db.select({
+                    meshCode: censusMesh2020.keyCode,
+                    households: censusMesh2020.t001101034,
+                    population: censusMesh2020.t001101001,
+                })
+                .from(censusMesh2020)
+                .where(like(censusMesh2020.keyCode, `${prefix}%`))
+                .all();
+                results.push(...prefixResults);
+            } catch (err) {
+                console.error('[MESH_BATCH_STATS_ERROR_PREFIX]:', prefix, err);
             }
         }
 
@@ -225,40 +246,26 @@ statisticsRouter.post('/mesh_batch', async (c) => {
         });
 
         const foundSet = new Set(resultMap.keys());
-        let missingCodes = codes.filter(code => !foundSet.has(code));
-
-        // Attempt prefix-aggregate fallback for missing codes (match GET /mesh/:meshCode behaviour)
-        const fallbackData: Array<{ meshCode: string; households: number; population: number; source: string; }> = [];
         const stillMissing: string[] = [];
 
-        for (const code of missingCodes) {
-            try {
-                const codeLen = code.length;
-                if (codeLen >= 4) {
-                    const summary = await db.select({
-                        totalPopulation: sql<number>`SUM(COALESCE(${censusMesh2020.t001101001}, 0))`,
-                        totalHouseholds: sql<number>`SUM(COALESCE(${censusMesh2020.t001101034}, 0))`,
-                        meshCount: sql<number>`COUNT(*)`,
-                    })
-                    .from(censusMesh2020)
-                    .where(like(censusMesh2020.keyCode, `${code}%`))
-                    .get();
-
-                    if (summary && summary.meshCount > 0) {
-                        fallbackData.push({ meshCode: code, households: summary.totalHouseholds ?? 0, population: summary.totalPopulation ?? 0, source: 'local-aggregate' });
-                        continue;
-                    }
+        for (const code of codes) {
+            if (code.length < 8) {
+                // For prefixes, check if any result starts with it
+                const found = results.some(r => r.meshCode.startsWith(code));
+                if (!found) stillMissing.push(code);
+            } else {
+                // For exact matches
+                if (!foundSet.has(code)) {
+                    stillMissing.push(code);
                 }
-                stillMissing.push(code);
-            } catch (err) {
-                console.warn('[MESH_BATCH_FALLBACK_ERROR]:', code, err);
-                stillMissing.push(code);
             }
         }
 
-        // Combine exact-match results and fallback aggregate results
+        // Combine exact-match results
         const exactData = Array.from(resultMap.values()).map(r => ({ ...r, households: r.households ?? 0, population: r.population ?? 0, source: 'local' }));
-        const allData = exactData.concat(fallbackData);
+        
+        // Note: Frontend now handles aggregation. We only return raw data.
+        const allData = exactData;
 
         c.header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
         c.header('Access-Control-Allow-Origin', '*');
