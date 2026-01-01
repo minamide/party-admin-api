@@ -127,7 +127,23 @@ activityGroupsRouter.get('/:id/members', async (c) => {
       roleMap[vid] = { role: r.role };
     }
 
-    const merged = memberUsers.map((u: any) => ({ id: u.id, name: u.name, email: u.email, role: roleMap[u.id]?.role || null }));
+    // Map users by id for quick lookup
+    const userMap: Record<string, any> = {};
+    for (const u of memberUsers) {
+      userMap[u.id] = u;
+    }
+
+    // Ensure we return an entry for every relation even if the user row is missing
+    const merged = volunteerIds.map((vid: string) => {
+      const u = userMap[vid];
+      return {
+        id: vid,
+        name: u?.name ?? null,
+        email: u?.email ?? null,
+        role: roleMap[vid]?.role ?? null,
+      };
+    });
+
     return c.json(merged, 200);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
