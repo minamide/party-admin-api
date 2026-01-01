@@ -20,6 +20,21 @@ import {
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
 
+const safeParseSettings = (value?: string | null) => {
+  if (!value) return {};
+  try {
+    return JSON.parse(value);
+  } catch (err) {
+    console.warn('Failed to parse user settings in auth route', { value });
+    return {};
+  }
+};
+
+const extractSelectedGroupId = (userRow: any) => {
+  const settings = safeParseSettings(userRow?.settings);
+  return settings?.selectedGroupId ?? null;
+};
+
 export const authRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 /**
@@ -37,6 +52,7 @@ authRouter.post('/sign-up', async (c) => {
         createErrorResponse(
           `Missing required fields: ${validation.missing?.join(', ')}`,
           'VALIDATION_ERROR',
+
           { missing: validation.missing }
         ),
         400
@@ -186,6 +202,7 @@ authRouter.post('/sign-up', async (c) => {
             name: body.name,
             role: body.role || 'user',
             isVerified: false,
+            selectedGroupId: null,
           },
           token,
           emailSent: emailResult.success,
@@ -269,6 +286,8 @@ authRouter.post('/sign-in', async (c) => {
       86400 // 24 時間
     );
 
+    const selectedGroupId = extractSelectedGroupId(user);
+
     return c.json(
       {
         success: true,
@@ -280,6 +299,7 @@ authRouter.post('/sign-in', async (c) => {
             name: user.name,
             role: user.role || 'user',
             isAdmin: user.role === 'admin',
+            selectedGroupId,
           },
           token,
         },
@@ -327,7 +347,7 @@ authRouter.get('/me', async (c) => {
       .select()
       .from(users)
       .where(eq(users.id, auth.user.userId))
-      .then(rows => rows[0]);
+      .then((rows) => rows[0]);
 
     if (!user) {
       return c.json(
@@ -336,9 +356,9 @@ authRouter.get('/me', async (c) => {
       );
     }
 
-    // role が 'admin' の場合に isAdmin フラグを追加
     const userData = {
       ...user,
+      selectedGroupId: extractSelectedGroupId(user),
       isAdmin: user.role === 'admin',
     };
 
@@ -372,7 +392,6 @@ authRouter.post('/change-password', async (c) => {
 
     const body = await c.req.json();
 
-    // バリデーション
     const validation = validateRequired(body, ['oldPassword', 'newPassword']);
     if (!validation.valid) {
       return c.json(
@@ -385,7 +404,6 @@ authRouter.post('/change-password', async (c) => {
       );
     }
 
-    // パスワード強度のチェック
     const passwordStrength = checkPasswordStrength(body.newPassword);
     if (passwordStrength === 'weak') {
       return c.json(
@@ -412,7 +430,6 @@ authRouter.post('/change-password', async (c) => {
       );
     }
 
-    // 現在のパスワードを確認
     if (!user.passwordHash || !user.passwordSalt) {
       return c.json(
         createErrorResponse('Password not set for this account', 'PASSWORD_NOT_SET'),
@@ -433,10 +450,8 @@ authRouter.post('/change-password', async (c) => {
       );
     }
 
-    // 新しいパスワードをハッシュ化
     const { hash, salt } = await hashPassword(body.newPassword);
 
-    // パスワードを更新
     await db
       .update(users)
       .set({

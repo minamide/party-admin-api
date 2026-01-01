@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { users } from './schema';
 
 /**
  * 選挙管理スキーマ用テーブル定義
@@ -7,7 +8,6 @@ import { sql } from 'drizzle-orm';
  */
 
 // ========================================
-import { users } from './schema';
 // マスターテーブル (m_* テーブル)
 // ========================================
 // 参照用の基本情報を管理するテーブル群

@@ -47,6 +47,7 @@ export const posts = sqliteTable('posts', {
   id: text('id').primaryKey(),
   authorId: text('author_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   communityId: text('community_id'),
+  groupId: text('group_id'),
   content: text('content'),
   media: text('media'), // JSON
   hashtags: text('hashtags'), // JSON array

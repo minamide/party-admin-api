@@ -6,6 +6,16 @@ import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired, isValidEmail, isValidHandle } from '../utils/validation';
 import { requireAuth, requireRole } from '../middleware/auth';
 
+const safeParseSettings = (value?: string | null) => {
+  if (!value) return {};
+  try {
+    return JSON.parse(value);
+  } catch (err) {
+    console.warn('Failed to parse user settings', { value });
+    return {};
+  }
+};
+
 export const usersRouter = new Hono<{ Bindings: CloudflareBindings }>();
 
 // GET /users - リスト取得（認証必須、管理者のみ）
@@ -164,10 +174,33 @@ usersRouter.put("/:id", requireAuth, async (c) => {
       }
     }
 
-    console.log('Updating user with data:', { id, updateData: { ...updateData, photoUrl: updateData.photoUrl ? '***' : undefined, bannerUrl: updateData.bannerUrl ? '***' : undefined } });
-
-    // Update 前の状態を確認
     const userBefore = await db.select().from(users).where(eq(users.id, id)).get();
+    const existingSettings = safeParseSettings(userBefore?.settings);
+    const nextSettings = { ...existingSettings };
+    let settingsChanged = false;
+    if (body.selectedGroupId !== undefined) {
+      const normalized = body.selectedGroupId ? String(body.selectedGroupId) : null;
+      if (nextSettings.selectedGroupId !== normalized) {
+        nextSettings.selectedGroupId = normalized;
+        settingsChanged = true;
+      }
+    }
+
+    if (settingsChanged) {
+      updateData.settings = JSON.stringify(nextSettings);
+    }
+
+    console.log('Updating user with data:', {
+      id,
+      updateData: {
+        ...updateData,
+        photoUrl: updateData.photoUrl ? '***' : undefined,
+        bannerUrl: updateData.bannerUrl ? '***' : undefined,
+      },
+      selectedGroupId: body.selectedGroupId ?? null,
+    });
+
+    console.log('User settings before update:', { selectedGroupId: existingSettings.selectedGroupId ?? null });
     console.log('User state before update:', { 
       id, 
       nameBefore: userBefore?.name,

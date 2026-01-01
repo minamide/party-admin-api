@@ -236,6 +236,7 @@ postsRouter.post("/", requireAuth, async (c) => {
       id: crypto.randomUUID(),
       authorId: body.authorId,
       communityId: body.communityId || null,
+      groupId: body.groupId || null,
       content: body.content || null,
       media: body.media ? JSON.stringify(body.media) : null,
       hashtags: body.hashtags ? JSON.stringify(body.hashtags) : null,
