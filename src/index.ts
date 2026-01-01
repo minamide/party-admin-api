@@ -22,6 +22,8 @@ import { hashtagsRouter } from './routes/hashtags';
 import { settingsRouter } from './routes/settings';
 import { healthRouter } from './routes/health';
 import { activityPlacesRouter } from './routes/activity_places';
+import { activityGroupsRouter } from './routes/activity_groups';
+import { prefecturesRouter } from './routes/prefectures';
 import { statisticsRouter } from './routes/statistics';
 import { censusMeshRouter } from './routes/census_mesh';
 import { debugRouter } from './routes/debug_db';
@@ -102,6 +104,8 @@ const routes: RouteEntry[] = [
   ['hashtags', hashtagsRouter],
   ['settings', settingsRouter],
   ['activity_places', activityPlacesRouter],
+  ['activity-groups', activityGroupsRouter],
+  ['prefectures', prefecturesRouter],
   ['volunteer/locations', activityPlacesRouter],
   ['census-mesh', censusMeshRouter],
   ['r2', r2Router],

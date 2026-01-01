@@ -18,15 +18,11 @@ export const mProportionalBlocks = sqliteTable('m_proportional_blocks', {
   blockName: text('block_name').notNull(),
   numSeats: integer('num_seats'),
 });
-  // 町丁・字の粒度で位置を紐付け
-  townKeyCode: text('town_key_code').references(() => mTowns.keyCode),
 
 /** 都道府県マスター：日本全国の47都道府県情報を保持 */
 export const mPrefectures = sqliteTable('m_prefectures', {
   prefCode: text('pref_code').primaryKey(),
   prefName: text('pref_name').notNull(),
-  // グループ所属ユーザー
-  volunteerId: text('volunteer_id').notNull().references(() => users.id),
   proportionalBlockCode: text('proportional_block_code').references(() => mProportionalBlocks.blockCode),
 });
 
@@ -35,16 +31,12 @@ export const mCities = sqliteTable('m_cities', {
   cityCode: text('city_code').primaryKey(),
   prefCode: text('pref_code').notNull().references(() => mPrefectures.prefCode),
   cityName: text('city_name').notNull(),
-  // 任意参加のため削除時はNULL許容
-  volunteerId: text('volunteer_id').references(() => users.id),
   centerLocation: text('center_location'), // WKT形式
 });
 
 /** 町丁・字マスター：市区町村以下の町丁・字情報を管理 */
 export const mTowns = sqliteTable('m_towns', {
   keyCode: text('key_code').primaryKey(), // 町丁・字等コード（最大11桁）
-  // 活動の町丁・字粒度
-  townKeyCode: text('town_key_code').references(() => mTowns.keyCode),
   prefCode: text('pref_code').notNull().references(() => mPrefectures.prefCode), // 都道府県コード（2桁）
   cityCode: text('city_code').notNull().references(() => mCities.cityCode), // 市区町村コード（5桁）
   level: integer('level').notNull(), // 表章単位
@@ -55,8 +47,6 @@ export const mTowns = sqliteTable('m_towns', {
   households: integer('households'), // 世帯総数
 });
 
-  // 掲示担当者
-  postedBy: text('posted_by').references(() => users.id),
 export const mElectionTypes = sqliteTable('m_election_types', {
   typeCode: text('type_code').primaryKey(),
   typeName: text('type_name').notNull(),
@@ -66,16 +56,13 @@ export const mElectionTypes = sqliteTable('m_election_types', {
 export const mElectoralDistricts = sqliteTable('m_electoral_districts', {
   id: text('id').primaryKey(),
   chamberTypeCode: text('chamber_type_code').notNull(),
-  // ルート担当者
-  volunteerId: text('volunteer_id').references(() => users.id),
   districtNumber: integer('district_number').notNull(),
   name: text('name').notNull(),
 });
 
 /** 政党マスター：政党の基本情報（名称、色コード、ロゴ等）を管理 */
 export const mParties = sqliteTable('m_parties', {
-  // 報告者
-  reporterId: text('reporter_id').references(() => users.id),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   shortName: text('short_name'),
   colorCode: text('color_code'), // #RRGGBB形式
@@ -140,7 +127,7 @@ export const relCityDistricts = sqliteTable('rel_city_districts', {
 export const relGroupMembers = sqliteTable('rel_group_members', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   groupId: text('group_id').notNull().references(() => tActivityGroups.id),
-  volunteerId: text('volunteer_id').notNull().references(() => tActivityGroups.id),
+  volunteerId: text('volunteer_id').notNull().references(() => users.id),
   role: text('role'),
 });
 
@@ -174,7 +161,7 @@ export const tActivities = sqliteTable('t_activities', {
   electionId: text('election_id').references(() => tElections.id),
   activityType: text('activity_type').notNull(),
   activityDate: text('activity_date').notNull(),
-  volunteerId: text('volunteer_id'),
+  volunteerId: text('volunteer_id').references(() => users.id),
   groupId: text('group_id').references(() => tActivityGroups.id),
   description: text('description'),
   durationMinutes: integer('duration_minutes'),
@@ -195,7 +182,7 @@ export const tPosterRoutes = sqliteTable('t_poster_routes', {
 export const tRouteAssignments = sqliteTable('t_route_assignments', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   routeId: text('route_id').notNull().references(() => tPosterRoutes.id),
-  volunteerId: text('volunteer_id'),
+  volunteerId: text('volunteer_id').references(() => users.id),
   groupId: text('group_id').references(() => tActivityGroups.id),
 });
 
@@ -208,7 +195,7 @@ export const tPosterBoards = sqliteTable('t_poster_boards', {
   routeId: text('route_id').references(() => tPosterRoutes.id),
   isPosted: integer('is_posted').notNull().default(0),
   postedAt: text('posted_at'),
-  postedBy: text('posted_by'),
+  postedBy: text('posted_by').references(() => users.id),
   postedByGroupId: text('posted_by_group_id').references(() => tActivityGroups.id),
   status: text('status').notNull().default('active'),
   note: text('note'),
@@ -219,7 +206,7 @@ export const tPosterBoards = sqliteTable('t_poster_boards', {
 export const tBoardReports = sqliteTable('t_board_reports', {
   id: text('id').primaryKey(),
   boardId: text('board_id').notNull().references(() => tPosterBoards.id),
-  reporterId: text('reporter_id'),
+  reporterId: text('reporter_id').references(() => users.id),
   reportType: text('report_type').notNull(),
   description: text('description'),
   photoUrl: text('photo_url'),

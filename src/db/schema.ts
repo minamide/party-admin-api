@@ -310,6 +310,25 @@ export const activityPlaces = sqliteTable('activity_places', {
   updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+// ----------------------------------------
+// 活動グループ (t_activity_groups) / グループメンバー関連
+// ----------------------------------------
+export const activityGroups = sqliteTable('t_activity_groups', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  prefecture: text('prefecture'),
+  colorCode: text('color_code'),
+  logoUrl: text('logo_url'),
+});
+
+export const relGroupMembers = sqliteTable('rel_group_members', {
+  id: integer('id').primaryKey(),
+  groupId: text('group_id').notNull().references(() => activityGroups.id),
+  volunteerId: text('volunteer_id').notNull(),
+  role: text('role'),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const activityPlacePhotos = sqliteTable('activity_place_photos', {
   id: text('id').primaryKey(),
   placeId: text('place_id').notNull().references(() => activityPlaces.id, { onDelete: 'cascade' }),
