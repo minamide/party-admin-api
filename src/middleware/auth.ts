@@ -88,8 +88,8 @@ export async function authMiddleware(c: Context, next: Next): Promise<void> {
     // テスト実行中 (NODE_ENV=test または VITEST=1 または CI=1) の場合、
     // そのシークレットで再度検証を試みる。
     const testSecret = process.env.TEST_JWT_SECRET;
-    const isTestEnv = process.env.NODE_ENV === 'test' || process.env.VITEST === '1' || process.env.CI === '1';
-    if (testSecret && isTestEnv) {
+      const isD1Test = process.env.TEST_D1 === '1';
+      if (testSecret && isD1Test) {
       try {
         const payload = await verifyJWT(token, testSecret);
         console.log('authMiddleware: JWT verified with TEST_JWT_SECRET. Payload userId:', payload.userId);
@@ -136,7 +136,7 @@ export async function requireAuth(c: Context, next: Next): Promise<void> {
   // ユーザー情報がない、またはエラーがある場合は認証失敗
   if (!authContext?.user) {
     // テスト実行時にテスト用の既定認証コンテキストを注入するオプション
-    if (process.env.TEST_AUTH_BYPASS === '1') {
+      if (process.env.TEST_AUTH_BYPASS === '1' && process.env.TEST_D1 === '1') {
       // テストバイパス時は、可能であればリクエストヘッダーからユーザーIDを読み取る。
       // - `x-test-user-id`: 明示的なテストユーザーIDヘッダー
       // - `Authorization: Bearer <token>`: トークンが JWT 形式ならペイロードをデコードして userId を代用

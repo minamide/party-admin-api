@@ -1,9 +1,3 @@
-```markdown
-
-```
-
----
-
 ---
 
 # COMBINED_DOCS — 統合ドキュメント
@@ -2070,6 +2064,261 @@ INSERT OR IGNORE INTO m_activity_types(type_code,label_ja,sort_order,is_active) 
 
 ---
 
-詳細が必要なセクションがあれば教えてください。元ファイルの全文をそのまま組み込むことも可能です。
+
+---
+
+## 追加: x_mockup スキーマ（抜粋）
+
+下記はワークスペース `x_mockup/database_schema.sql` からの抜粋です。Cloudflare D1 とは実装差分があり得るため、必要に応じて `PRAGMA table_info(...)` を取得して差分を確認してください。
+
+```sql
+-- sns.users（要点）
+CREATE TABLE sns.users (
+  id TEXT PRIMARY KEY,
+  name VARCHAR(50) NOT NULL,
+  handle VARCHAR(15) UNIQUE NOT NULL,
+  role public.system_role NOT NULL DEFAULT 'user',
+  bio TEXT,
+  location VARCHAR(100),
+  location_geom GEOGRAPHY(Point, 4326),
+  website TEXT,
+  photo_url TEXT,
+  banner_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  pinned_post_id UUID,
+  following_count INT NOT NULL DEFAULT 0,
+  followers_count INT NOT NULL DEFAULT 0,
+  posts_count INT NOT NULL DEFAULT 0,
+  is_suspended BOOLEAN NOT NULL DEFAULT FALSE,
+  is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  settings JSONB
+);
+
+-- sns.posts（要点）
+CREATE TABLE sns.posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  author_id TEXT NOT NULL REFERENCES sns.users(id) ON DELETE CASCADE,
+  community_id UUID,
+  content TEXT,
+  media JSONB,
+  hashtags TEXT[],
+  type public.post_type NOT NULL DEFAULT 'text',
+  visibility public.post_visibility NOT NULL DEFAULT 'public',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  parent_id UUID REFERENCES sns.posts(id) ON DELETE SET NULL,
+  root_id UUID REFERENCES sns.posts(id) ON DELETE SET NULL,
+  reference_post_id UUID REFERENCES sns.posts(id) ON DELETE SET NULL,
+  event JSONB,
+  poll JSONB,
+  geo_location GEOGRAPHY(Point, 4326),
+  likes_count INT NOT NULL DEFAULT 0,
+  reposts_count INT NOT NULL DEFAULT 0,
+  replies_count INT NOT NULL DEFAULT 0,
+  views_count INT NOT NULL DEFAULT 0,
+  attendees_count INT NOT NULL DEFAULT 0,
+  author_info JSONB
+);
+
+-- インデックス（抜粋）
+CREATE INDEX idx_users_handle ON sns.users (handle);
+CREATE INDEX idx_posts_author_id_created_at ON sns.posts (author_id, created_at DESC);
+CREATE INDEX idx_posts_parent_id_created_at ON sns.posts (parent_id, created_at ASC);
+
+```
+
+---
+
+注: 上記は PostgreSQL/PostGIS 向けの設計要素（`GEOGRAPHY`, `JSONB`, `gen_random_uuid()` 等）を含みます。D1/SQLite 環境では型や関数に差分があるため、D1 側の `PRAGMA table_info(table);` 出力をこのドキュメントに追記して一貫性を保つことを推奨します。
+
+---
+
+## マイグレーション（D1 互換）抜粋
+
+以下はリポジトリ内 `migrations/20251222131500_sns_create_table.sql`（D1/SQLite 互換版）からの主要抜粋です。テーブル定義と主要インデックスを示します。
+
+```sql
+-- users
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  handle TEXT UNIQUE NOT NULL,
+  role TEXT NOT NULL DEFAULT 'user',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  settings TEXT
+);
+
+-- posts
+CREATE TABLE IF NOT EXISTS posts (
+  id TEXT PRIMARY KEY,
+  author_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 中間テーブル例: follows, likes, reposts, bookmarks
+CREATE TABLE IF NOT EXISTS follows (...);
+
+-- インデックス（抜粋）
+CREATE INDEX IF NOT EXISTS idx_users_handle ON users (handle);
+CREATE INDEX IF NOT EXISTS idx_posts_author_id_created_at ON posts (author_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_posts_parent_id_created_at ON posts (parent_id, created_at);
+```
+
+注: 上記は簡易抜粋です。完全な定義は `migrations/20251222131500_sns_create_table.sql` を参照してください。
+
+---
+
+## Census Mesh (2020) — マイグレーション抜粋
+
+`migrations/20251231000001_create_census_mesh_2020.sql` からの抜粋:
+
+```sql
+CREATE TABLE census_mesh_2020 (
+  key_code TEXT PRIMARY KEY,
+  htk_syori INTEGER,
+  htk_saki TEXT,
+  gassan TEXT,
+  t001101001 INTEGER,
+  t001101002 INTEGER,
+  t001101003 INTEGER,
+  -- ...（人口・世帯指標が続く）
+  t001101050 INTEGER
+);
+```
+
+用途: 国勢調査メッシュデータ（人口・世帯指標）を格納します。API の検索／集計で利用します。
+
+---
+
+## 活動場所（activity_places） — マイグレーション抜粋
+
+`migrations/20251230000001_create_activity_places.sql` からの抜粋:
+
+```sql
+CREATE TABLE IF NOT EXISTS activity_places (
+  id TEXT NOT NULL PRIMARY KEY,
+  name TEXT NOT NULL,
+  address TEXT,
+  city_code TEXT,
+  latitude REAL,
+  longitude REAL,
+  location_geojson TEXT,
+  radius_m INTEGER NOT NULL DEFAULT 50,
+  capacity INTEGER,
+  activity_types TEXT,
+  notes TEXT,
+  photo_count INTEGER NOT NULL DEFAULT 0,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_by TEXT,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS activity_place_photos (
+  id TEXT NOT NULL PRIMARY KEY,
+  place_id TEXT NOT NULL,
+  url TEXT NOT NULL,
+  filename TEXT,
+  metadata TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_primary INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_places_city_code ON activity_places(city_code);
+CREATE INDEX IF NOT EXISTS idx_activity_places_latitude ON activity_places(latitude);
+CREATE INDEX IF NOT EXISTS idx_activity_places_longitude ON activity_places(longitude);
+CREATE INDEX IF NOT EXISTS idx_activity_place_photos_place_id ON activity_place_photos(place_id);
+
+-- 活動種別マスター
+CREATE TABLE IF NOT EXISTS m_activity_types (
+  type_code TEXT PRIMARY KEY,
+  label_ja TEXT NOT NULL,
+  label_en TEXT,
+  sort_order INTEGER DEFAULT 100,
+  is_active INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS rel_activity_place_types (
+  place_id TEXT NOT NULL,
+  type_code TEXT NOT NULL,
+  PRIMARY KEY (place_id, type_code)
+);
+
+```
+
+注: 初期データや外部キー、インデックスの詳細は元マイグレーションを参照してください。
+
+---
+
+## 活動グループ（t_activity_groups / rel_group_members） — マイグレーション抜粋
+
+`migrations/0001_add_activity_groups.sql` からの抜粋:
+
+```sql
+CREATE TABLE IF NOT EXISTS t_activity_groups (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  color_code TEXT,
+  logo_url TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rel_group_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_id TEXT NOT NULL,
+  volunteer_id TEXT NOT NULL,
+  role TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_rel_group_members_group_id ON rel_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_rel_group_members_volunteer_id ON rel_group_members(volunteer_id);
+```
+
+---
+
+## OAuth / Social Accounts — マイグレーション抜粋
+
+`migrations/0002_oauth_social_accounts.sql` からの抜粋:
+
+```sql
+CREATE TABLE IF NOT EXISTS social_accounts (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  provider_user_id TEXT NOT NULL,
+  email TEXT,
+  name TEXT,
+  avatar TEXT,
+  access_token TEXT NOT NULL,
+  refresh_token TEXT,
+  token_expires_at TEXT,
+  linked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(provider, provider_user_id)
+);
+
+CREATE TABLE IF NOT EXISTS oauth_states (
+  state TEXT PRIMARY KEY,
+  provider TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_social_accounts_user_id ON social_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_social_accounts_provider ON social_accounts(provider);
+CREATE INDEX IF NOT EXISTS idx_oauth_states_expires_at ON oauth_states(expires_at);
+```
+
+注: 完全な定義は各マイグレーションファイルを参照してください。
+
+
 
 ````
