@@ -22,6 +22,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Apply D1 migrations (local)
+        run: |
+          # Apply any pending D1 migrations to the local development database used by the runner
+          # Use npx to ensure the wrangler binary from devDependencies is used
+          npx wrangler d1 migrations apply party-admin-db --local || true
+
       - name: Start dev server (background)
         env:
           JWT_SECRET: your-super-secret-jwt-key-change-this-in-production

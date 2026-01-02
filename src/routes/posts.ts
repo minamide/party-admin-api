@@ -235,11 +235,10 @@ postsRouter.post("/", requireAuth, async (c) => {
       // D1 (SQLite) doesn't reliably support RETURNING() across environments.
       // Create id first, perform insert, then SELECT the row back.
       const newId = crypto.randomUUID();
-      await db.insert(posts).values({
+      const insertValues: any = {
         id: newId,
         authorId: body.authorId,
         communityId: body.communityId || null,
-        groupId: body.groupId || null,
         content: body.content || null,
         media: body.media ? JSON.stringify(body.media) : null,
         hashtags: body.hashtags ? JSON.stringify(body.hashtags) : null,
@@ -247,7 +246,14 @@ postsRouter.post("/", requireAuth, async (c) => {
         visibility: body.visibility || 'public',
         parentId,
         rootId,
-      });
+      };
+
+      // Only include groupId when provided (avoid SQL error if column absent)
+      if (body.groupId !== undefined && body.groupId !== null && body.groupId !== '') {
+        insertValues.groupId = body.groupId;
+      }
+
+      await db.insert(posts).values(insertValues);
 
       const result = await db.select().from(posts).where(eq(posts.id, newId)).get();
       return c.json(result, 201);
