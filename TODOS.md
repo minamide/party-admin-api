@@ -41,8 +41,13 @@
    - 関連: `.github/workflows/`（未作成）
 
 10. ドキュメント更新：`TABLE_DEFINITIONS.md` と `activity_places` API 仕様を反映
-   - ステータス: not-started
+   - ステータス: completed
    - 関連: `docs/`, `README.md`
+   - 備考: 統合ドキュメント `docs/COMBINED_DOCS.md` を作成・整形しました。
+
+11. render preview and confirm
+   - ステータス: not-started
+   - 説明: ドキュメントをローカルまたはプレビュー環境でレンダリングし、リンクとコードフェンス表示を最終確認する
 
 ---
 

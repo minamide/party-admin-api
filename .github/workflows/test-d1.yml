@@ -1,0 +1,43 @@
+name: D1 Integration Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-d1:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      CI: '1'
+      # Set this secret in your repository settings (required)
+      TEST_JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Generate test JWTs and export to environment
+        run: |
+          node scripts/generate-test-tokens.mjs > /tmp/test_tokens.env
+          cat /tmp/test_tokens.env >> $GITHUB_ENV
+
+      - name: Run D1 tests (use signed test JWTs)
+        # Ensure TEST_AUTH_BYPASS is disabled so tests validate real tokens.
+        run: npm run test:d1
+        env:
+          TEST_AUTH_BYPASS: '0'
+          # optionally tests can pick up tokens via TEST_ADMIN_TOKEN/TEST_USER_TOKEN

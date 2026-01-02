@@ -104,7 +104,7 @@ describe('Posts D1 Integration Tests', () => {
 
     it('should handle POST / - create post with valid data', async () => {
       const postData = {
-        authorId: 'test-user-id',  // テスト用認証ユーザーID
+        authorId: 'test-user-id',  // チE��ト用認証ユーザーID
         content: 'Test post content',
         type: 'text',
         visibility: 'public',
@@ -176,7 +176,7 @@ describe('Posts D1 Integration Tests', () => {
     it('should support parent/child post relationships', async () => {
       const parentId = crypto.randomUUID();
       const childData = {
-        authorId: 'test-user-id',  // テスト用認証ユーザーID
+        authorId: 'test-user-id',  // チE��ト用認証ユーザーID
         content: 'Reply to parent',
         type: 'text',
         visibility: 'public',
