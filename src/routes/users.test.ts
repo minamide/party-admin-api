@@ -142,7 +142,7 @@ describe('Users Router', () => {
           body: JSON.stringify(newUser),
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer dummy-token'
+            'Authorization': `Bearer ${process.env.TEST_ADMIN_TOKEN || 'dummy-token'}`
           },
         })
       );

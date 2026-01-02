@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.d1.test.ts'],
+    setupFiles: ['src/test/setupAuthMock.ts'],
     testTimeout: 30000,
   },
 });

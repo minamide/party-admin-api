@@ -232,8 +232,12 @@ postsRouter.post("/", requireAuth, async (c) => {
       }
     }
     
-    const result = await db.insert(posts).values({
-      id: crypto.randomUUID(),
+    const id = crypto.randomUUID();
+
+    // D1 (SQLite) のドライバ実装や Drizzle の RETURNING のサポート差異を避けるため、
+    // INSERT->SELECT の2ステップで作成レコードを取得するようにします。
+    await db.insert(posts).values({
+      id,
       authorId: body.authorId,
       communityId: body.communityId || null,
       groupId: body.groupId || null,
@@ -244,8 +248,14 @@ postsRouter.post("/", requireAuth, async (c) => {
       visibility: body.visibility || 'public',
       parentId,
       rootId,
-    }).returning().get();
-    
+    }).run();
+
+    const result = await db
+      .select({ post: posts })
+      .from(posts)
+      .where(eq(posts.id, id))
+      .get();
+
     return c.json(result, 201);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
