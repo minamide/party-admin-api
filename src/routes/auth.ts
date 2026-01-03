@@ -19,6 +19,7 @@ import {
 } from '../utils/verification';
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
+import { requireAuth } from '../middleware/auth';
 
 const safeParseSettings = (value?: string | null) => {
   if (!value) return {};
@@ -694,5 +695,57 @@ authRouter.post('/resend-verification', async (c) => {
     const message = error instanceof Error ? error.message : 'Failed to resend verification email';
     const stack = error instanceof Error ? error.stack : undefined;
     return c.json(createErrorResponse(message, 'RESEND_VERIFICATION_ERROR', { stack }), 500);
+  }
+});
+
+/**
+ * GET /auth/me
+ * 認証されたユーザーの情報を取得
+ */
+authRouter.get('/me', requireAuth, async (c) => {
+  try {
+    const authContext = c.env.auth;
+    if (!authContext?.user) {
+      return c.json(
+        createErrorResponse('Not authenticated', 'NOT_AUTHENTICATED'),
+        401
+      );
+    }
+
+    const db = getDb(c);
+    const user = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, authContext.user.userId))
+      .then(rows => rows[0]);
+
+    if (!user) {
+      return c.json(
+        createErrorResponse('User not found', 'USER_NOT_FOUND'),
+        404
+      );
+    }
+
+    // ユーザー情報を返す（パスワードハッシュは除外）
+    const { passwordHash, photoUrl, bannerUrl, ...userWithoutPassword } = user;
+    const selectedGroupId = extractSelectedGroupId(user);
+
+    return c.json(
+      {
+        success: true,
+        data: {
+          ...userWithoutPassword,
+          photo_url: photoUrl || null,
+          banner_url: bannerUrl || null,
+          selectedGroupId,
+        },
+      },
+      200
+    );
+  } catch (error: unknown) {
+    console.error('Get current user error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to get user information';
+    const stack = error instanceof Error ? error.stack : undefined;
+    return c.json(createErrorResponse(message, 'GET_USER_ERROR', { stack }), 500);
   }
 });

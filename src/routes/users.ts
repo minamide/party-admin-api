@@ -114,6 +114,27 @@ usersRouter.get("/:id", requireAuth, async (c) => {
   }
 });
 
+// GET /users/handle/:handle - ハンドルでユーザーを取得（認証必須）
+usersRouter.get("/handle/:handle", requireAuth, async (c) => {
+  try {
+    const handle = c.req.param('handle');
+    const db = getDb(c);
+    const result = await db.select().from(users).where(eq(users.handle, handle)).get();
+    
+    if (!result) {
+      return c.json(
+        createErrorResponse('ユーザーが見つかりません', 'USER_NOT_FOUND'),
+        404
+      );
+    }
+    
+    return c.json(result, 200);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    return c.json(createErrorResponse(message, 'USER_GET_ERROR'), 500);
+  }
+});
+
 // PUT /users/:id - ユーザー更新（認証必須）
 // PUT /users/:id - ユーザー更新（認証必須）
 usersRouter.put("/:id", requireAuth, async (c) => {
@@ -167,7 +188,20 @@ usersRouter.put("/:id", requireAuth, async (c) => {
       updatedAt: new Date().toISOString(),
     };
 
-    const allowedFields = ['name', 'email', 'handle', 'bio', 'location', 'website', 'photoUrl', 'bannerUrl'];
+    // snake_case と camelCase の両方をサポート
+    if (body.photo_url !== undefined) {
+      updateData.photoUrl = body.photo_url || null;
+    } else if (body.photoUrl !== undefined) {
+      updateData.photoUrl = body.photoUrl || null;
+    }
+
+    if (body.banner_url !== undefined) {
+      updateData.bannerUrl = body.banner_url || null;
+    } else if (body.bannerUrl !== undefined) {
+      updateData.bannerUrl = body.bannerUrl || null;
+    }
+
+    const allowedFields = ['name', 'email', 'handle', 'bio', 'location', 'website'];
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updateData[field] = body[field] || null;
