@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { users } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { users, relGroupMembers, activityGroups } from '../db/schema';
+import { eq, and, leftJoin } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired, isValidEmail, isValidHandle } from '../utils/validation';
@@ -30,8 +30,23 @@ usersRouter.get("/", requireAuth, async (c) => {
       );
     }
     const db = getDb(c);
-    const result = await db.select().from(users).all();
-    return c.json(result, 200);
+    const result = await db.select({
+      user: users,
+      group: activityGroups
+    })
+    .from(users)
+    .leftJoin(relGroupMembers, eq(users.id, relGroupMembers.volunteerId))
+    .leftJoin(activityGroups, eq(relGroupMembers.groupId, activityGroups.id))
+    .all();
+
+    // データをフラット化して返却
+    const flattened = result.map(r => ({
+      ...r.user,
+      groupName: r.group?.name || null,
+      groupId: r.group?.id || null
+    }));
+
+    return c.json(flattened, 200);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     return c.json(createErrorResponse(message, 'USERS_LIST_ERROR'), 500);
@@ -86,6 +101,16 @@ usersRouter.post("/", requireAuth, async (c) => {
       photoUrl: body.photoUrl || null,
       bannerUrl: body.bannerUrl || null,
     }).returning().get();
+
+    // グループ所属の追加
+    const groupId = body.groupId || body.group_id;
+    if (groupId && groupId !== '未所属') {
+      await db.insert(relGroupMembers).values({
+        groupId: groupId,
+        volunteerId: body.id,
+        role: body.role || 'volunteer'
+      }).run();
+    }
     
     return c.json(result, 201);
   } catch (error: unknown) {
@@ -99,7 +124,15 @@ usersRouter.get("/:id", requireAuth, async (c) => {
   try {
     const id = c.req.param('id');
     const db = getDb(c);
-    const result = await db.select().from(users).where(eq(users.id, id)).get();
+    const result = await db.select({
+      user: users,
+      group: activityGroups
+    })
+    .from(users)
+    .leftJoin(relGroupMembers, eq(users.id, relGroupMembers.volunteerId))
+    .leftJoin(activityGroups, eq(relGroupMembers.groupId, activityGroups.id))
+    .where(eq(users.id, id))
+    .get();
     
     if (!result) {
       return c.json(
@@ -108,7 +141,11 @@ usersRouter.get("/:id", requireAuth, async (c) => {
       );
     }
     
-    return c.json(result, 200);
+    return c.json({
+      ...result.user,
+      groupName: result.group?.name || null,
+      groupId: result.group?.id || null
+    }, 200);
   } catch (error: unknown) {
     const message = getErrorMessage(error);
     return c.json(createErrorResponse(message, 'USER_GET_ERROR'), 500);
@@ -234,6 +271,21 @@ usersRouter.put("/:id", requireAuth, async (c) => {
 
     if (settingsChanged) {
       updateData.settings = JSON.stringify(nextSettings);
+    }
+
+    // グループ所属の更新
+    if (body.groupId !== undefined || body.group_id !== undefined) {
+      const newGroupId = body.groupId || body.group_id;
+      // 既存の所属を一旦削除（1ユーザー1グループ運用を想定）
+      await db.delete(relGroupMembers).where(eq(relGroupMembers.volunteerId, id)).run();
+      
+      if (newGroupId && newGroupId !== '未所属') {
+        await db.insert(relGroupMembers).values({
+          groupId: newGroupId,
+          volunteerId: id,
+          role: body.role || 'volunteer'
+        }).run();
+      }
     }
 
     console.log('Updating user with data:', {
