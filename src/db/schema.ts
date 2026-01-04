@@ -324,7 +324,7 @@ export const activityGroups = sqliteTable('t_activity_groups', {
 });
 
 export const relGroupMembers = sqliteTable('rel_group_members', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   groupId: text('group_id').notNull().references(() => activityGroups.id),
   volunteerId: text('volunteer_id').notNull(),
   role: text('role'),
