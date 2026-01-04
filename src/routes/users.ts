@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { users, relGroupMembers, activityGroups } from '../db/schema';
-import { eq, and, leftJoin } from 'drizzle-orm';
+import { eq, and, leftJoin, sql } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired, isValidEmail, isValidHandle } from '../utils/validation';
@@ -105,11 +105,9 @@ usersRouter.post("/", requireAuth, async (c) => {
     // グループ所属の追加
     const groupId = body.groupId || body.group_id;
     if (groupId && groupId !== '未所属') {
-      await db.insert(relGroupMembers).values({
-        groupId: groupId,
-        volunteerId: body.id,
-        role: body.role || 'volunteer'
-      }).run();
+      await db.run(
+        sql`INSERT INTO rel_group_members (group_id, volunteer_id, role, created_at) VALUES (${groupId}, ${body.id}, ${body.role || 'volunteer'}, CURRENT_TIMESTAMP)`
+      );
     }
     
     return c.json(result, 201);
@@ -280,11 +278,53 @@ usersRouter.put("/:id", requireAuth, async (c) => {
       await db.delete(relGroupMembers).where(eq(relGroupMembers.volunteerId, id)).run();
       
       if (newGroupId && newGroupId !== '未所属') {
-        await db.insert(relGroupMembers).values({
-          groupId: newGroupId,
-          volunteerId: id,
-          role: body.role || 'volunteer'
-        }).run();
+        let pragmaRes: any = null;
+        try {
+          pragmaRes = await db.run(sql`PRAGMA table_info('rel_group_members')`);
+          console.info('rel_group_members table_info:', { pragma: pragmaRes.results });
+        } catch (pErr) {
+          console.warn('Failed to read PRAGMA table_info for rel_group_members', { err: getErrorMessage(pErr) });
+        }
+        const roleValue = body.role || 'volunteer';
+        try {
+          const tableInfo = Array.isArray((pragmaRes as any)?.results) ? (pragmaRes as any).results : [];
+          const hasCreatedAt = tableInfo.some((col: any) => col.name === 'created_at');
+
+          // Log foreign_keys pragma and existence of target group for debugging
+          try {
+            const fk = await db.run(sql`PRAGMA foreign_keys`);
+            console.info('PRAGMA foreign_keys:', fk.results);
+          } catch (fkErr) {
+            console.warn('Failed to read PRAGMA foreign_keys', { err: getErrorMessage(fkErr) });
+          }
+
+          try {
+            const groupCheck = await db.run(sql`SELECT COUNT(*) as cnt FROM t_activity_groups WHERE id = ${newGroupId}`);
+            console.info('t_activity_groups existence check:', { results: groupCheck.results });
+          } catch (gErr) {
+            console.warn('Failed to check t_activity_groups existence', { err: getErrorMessage(gErr) });
+          }
+
+          if (hasCreatedAt) {
+            await db.run(
+              sql`INSERT INTO rel_group_members (group_id, volunteer_id, role, created_at) VALUES (${newGroupId}, ${id}, ${roleValue}, CURRENT_TIMESTAMP)`
+            );
+          } else {
+            await db.run(
+              sql`INSERT INTO rel_group_members (group_id, volunteer_id, role) VALUES (${newGroupId}, ${id}, ${roleValue})`
+            );
+          }
+        } catch (err: any) {
+          console.error('rel_group_members insert failed full error:', err);
+          console.error('rel_group_members insert failed details', {
+            sql: 'INSERT INTO rel_group_members (group_id, volunteer_id, role, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
+            params: [newGroupId, id, roleValue],
+            errorMessage: getErrorMessage(err),
+            stack: err instanceof Error ? err.stack : undefined,
+            results: (err && (err as any).results) ? (err as any).results : undefined,
+          });
+          throw err;
+        }
       }
     }
 

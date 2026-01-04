@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { activityGroups, relGroupMembers, users } from '../db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { getDb } from '../utils/db';
 import { getErrorMessage, createErrorResponse } from '../utils/errors';
 import { validateRequired } from '../utils/validation';
@@ -88,12 +88,34 @@ activityGroupsRouter.post('/', requireAuth, async (c) => {
       const creatorId = auth?.user?.userId;
       if (creatorId) {
         try {
-          await db.insert(relGroupMembers).values({
-            groupId: id,
-            volunteerId: creatorId,
-            role: 'admin',
+          // Check table schema to decide whether to include created_at
+          let hasCreatedAt = false;
+          try {
+            const pragma = await db.run(sql`PRAGMA table_info('rel_group_members')`);
+            const tableInfo = Array.isArray((pragma as any)?.results) ? (pragma as any).results : [];
+            hasCreatedAt = tableInfo.some((col: any) => col.name === 'created_at');
+            console.info('rel_group_members table_info (auto-add):', { pragma: tableInfo });
+          } catch (_) {
+            // ignore
+          }
+
+          if (hasCreatedAt) {
+            await db.run(
+              sql`INSERT INTO rel_group_members (group_id, volunteer_id, role, created_at) VALUES (${id}, ${creatorId}, 'admin', CURRENT_TIMESTAMP)`
+            );
+          } else {
+            await db.run(
+              sql`INSERT INTO rel_group_members (group_id, volunteer_id, role) VALUES (${id}, ${creatorId}, 'admin')`
+            );
+          }
+        } catch (err: any) {
+          console.error('rel_group_members auto-add failed', {
+            sql: 'INSERT INTO rel_group_members (group_id, volunteer_id, role, created_at?) VALUES (?, ?, ?, CURRENT_TIMESTAMP?)',
+            params: [id, creatorId, 'admin'],
+            error: getErrorMessage(err),
+            stack: err instanceof Error ? err.stack : undefined,
           });
-        } catch (_) { }
+        }
       }
       
       return c.json(created, 201);
