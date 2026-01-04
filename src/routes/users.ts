@@ -44,7 +44,7 @@ usersRouter.post("/", requireAuth, async (c) => {
     const auth = c.env.auth as any;
     const body = await c.req.json();
     
-    // Validation
+    // バリデーション
     const validation = validateRequired(body, ['id', 'name', 'handle']);
     if (!validation.valid) {
       return c.json(
@@ -82,6 +82,7 @@ usersRouter.post("/", requireAuth, async (c) => {
       handle: body.handle,
       role: body.role || 'user',
       bio: body.bio || null,
+      partyNumber: body.partyNumber || body.party_number || null,
       photoUrl: body.photoUrl || null,
       bannerUrl: body.bannerUrl || null,
     }).returning().get();
@@ -199,6 +200,17 @@ usersRouter.put("/:id", requireAuth, async (c) => {
       updateData.bannerUrl = body.banner_url || null;
     } else if (body.bannerUrl !== undefined) {
       updateData.bannerUrl = body.bannerUrl || null;
+    }
+
+    if (body.party_number !== undefined) {
+      updateData.partyNumber = body.party_number || null;
+    } else if (body.partyNumber !== undefined) {
+      updateData.partyNumber = body.partyNumber || null;
+    }
+
+    // 管理者のみロールの変更が可能
+    if (auth?.user?.role === 'admin' && body.role !== undefined) {
+      updateData.role = body.role;
     }
 
     const allowedFields = ['name', 'email', 'handle', 'bio', 'location', 'website'];

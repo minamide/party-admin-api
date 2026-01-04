@@ -23,7 +23,8 @@ export const users = sqliteTable('users', {
   postsCount: integer('posts_count').notNull().default(0),
   isSuspended: integer('is_suspended').notNull().default(0),
   isVerified: integer('is_verified').notNull().default(0),
-  settings: text('settings'), // JSON
+  partyNumber: text('party_number'),
+  settings: text('settings'), // JSON形式
 });
 
 export const verificationTokens = sqliteTable('verification_tokens', {
